@@ -10,7 +10,6 @@ import type {
   ConfigContextValue,
   ConfigData,
   APIProvider,
-  HealthUpdateEvent,
   ModelInfo
 } from './types'
 
@@ -18,16 +17,16 @@ import type {
 
 /** 默认配置 */
 const DEFAULT_CONFIG: ConfigData = {
-  apiKey: '',
-  hasApiKey: false,
-  apiProvider: 'zhipu',
+  provider: {},
   models: [],
   currentModel: '',
-  baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
-  port: 18789,
-  debug: false,
-  healthStatus: 'offline',
-  lastHealthCheck: null
+  gateway: {
+    baseUrl: '',
+    auth: {
+      mode: 'token',
+      token: ''
+    }
+  }
 } as const satisfies ConfigData
 
 /** IPC 通道名称 */
@@ -35,11 +34,7 @@ const IPC_CHANNELS = {
   GET_SETTINGS: 'config:get-settings',
   SAVE_API_KEY: 'config:save-api-key',
   DELETE_API_KEY: 'config:delete-api-key',
-  SAVE_CONFIG: 'config:save',
-  GET_HEALTH: 'config:get-health',
-  START_HEALTH_CHECK: 'config:start-health-check',
-  STOP_HEALTH_CHECK: 'config:stop-health-check',
-  HEALTH_UPDATE: 'claw-health-update'
+  SAVE_CONFIG: 'config:save'
 } as const
 
 // ==================== 类型定义 ====================
@@ -103,23 +98,22 @@ export function ConfigProvider({
       .then((response: unknown) => {
         if (
           isSuccessfulResponse<{
-            apiKey?: string
+            provider?: {}
             models?: readonly ModelInfo[]
             currentModel?: string
-            baseUrl?: string
+            gateway?: {}
           }>(response)
         ) {
-          const { apiKey, models, currentModel, baseUrl } = response.data
+          const { provider, models, currentModel, gateway } = response.data
 
           console.log('IPC_CHANNELS.GET_SETTINGS', response.data)
 
           setConfig((prev) => ({
             ...prev,
-            apiKey: apiKey ?? '',
-            hasApiKey: Boolean(apiKey),
+            provider: provider ?? {},
             models: models ?? [],
             currentModel: currentModel ?? '',
-            baseUrl: baseUrl ?? prev.baseUrl
+            gateway: gateway ?? {}
           }))
         }
       })
@@ -127,35 +121,6 @@ export function ConfigProvider({
         const errorMsg = extractErrorMessage(err, '获取设置失败')
         setError(errorMsg)
         console.error('[ConfigContext] 获取设置失败:', err)
-      })
-
-    // 获取健康状态
-    window.ipcRenderer
-      .invoke(IPC_CHANNELS.GET_HEALTH)
-      .then((response: unknown) => {
-        if (
-          isSuccessfulResponse<{ status: string; timestamp: number }>(response)
-        ) {
-          const { status, timestamp } = response.data
-
-          if (
-            status === 'online' ||
-            status === 'offline' ||
-            status === 'starting'
-          ) {
-            setConfig((prev) => ({
-              ...prev,
-              healthStatus: status,
-              lastHealthCheck: timestamp
-            }))
-          }
-        }
-      })
-      .catch((err) => {
-        console.error('[ConfigContext] 获取健康状态失败:', err)
-      })
-      .finally(() => {
-        setIsLoading(false)
       })
   }, [])
 
@@ -267,38 +232,6 @@ export function ConfigProvider({
     if (!currentModel) return null
     return models.find((m): m is ModelInfo => m.id === currentModel) ?? null
   }, [config.currentModel, config.models])
-
-  // ==================== 健康状态监听 ====================
-
-  useEffect(() => {
-    const handleHealthUpdate = (
-      _event: unknown,
-      data: HealthUpdateEvent
-    ): void => {
-      const { status, timestamp } = data
-      if (
-        status === 'online' ||
-        status === 'offline' ||
-        status === 'starting'
-      ) {
-        setConfig((prev) => ({
-          ...prev,
-          healthStatus: status,
-          lastHealthCheck: timestamp
-        }))
-      }
-    }
-
-    window.ipcRenderer.on(IPC_CHANNELS.HEALTH_UPDATE, handleHealthUpdate)
-
-    // 启动健康检查
-    window.ipcRenderer.invoke(IPC_CHANNELS.START_HEALTH_CHECK, config.port)
-
-    return () => {
-      window.ipcRenderer.off(IPC_CHANNELS.HEALTH_UPDATE, handleHealthUpdate)
-      window.ipcRenderer.invoke(IPC_CHANNELS.STOP_HEALTH_CHECK)
-    }
-  }, [config.port])
 
   // ==================== 初始化和自动刷新 ====================
 

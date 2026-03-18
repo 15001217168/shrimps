@@ -3,14 +3,15 @@ import * as fs from 'fs'
 import * as path from 'path'
 import axios from 'axios'
 import { BaseService } from '../utils/base-service'
-import {
-  loggerInfo,
-  loggerSuccess,
-  loggerError
-} from '../utils/logger'
+import { loggerInfo, loggerSuccess, loggerError } from '../utils/logger'
 import type { SandboxEnvService } from '../environment/sandbox-env'
 import type { LauncherService } from './launcher-service'
-import type { APIProvider, AppConfig, HealthStatus } from '../types'
+import type {
+  APIProvider,
+  AppConfig,
+  HealthStatus,
+  ProviderConfig
+} from '../types'
 import { getGatewayPort, getGatewayBaseUrl } from '../utils/shared-config'
 
 const LOG_SOURCE = 'config_service'
@@ -21,7 +22,9 @@ let CONFIG_DIR = ''
 /**
  * 获取 OpenClaw 配置文件路径
  */
-const getOpenClawConfigPath = (sandboxEnvService: SandboxEnvService | null): string => {
+const getOpenClawConfigPath = (
+  sandboxEnvService: SandboxEnvService | null
+): string => {
   if (!sandboxEnvService) {
     return ''
   }
@@ -70,12 +73,6 @@ export class ConfigService extends BaseService {
    */
   private getDefaultConfig(): AppConfig {
     return {
-      claw: {
-        provider: 'zhipu',
-        apiKey: '',
-        baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
-        model: 'glm-4-flash'
-      },
       gateway: {
         baseUrl: 'http://localhost:18789',
         auth: {
@@ -84,7 +81,24 @@ export class ConfigService extends BaseService {
         }
       },
       port: 18789,
-      debug: false
+      debug: false,
+      providers: {
+        zai: {
+          apiKey: '',
+          baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+          models: []
+        },
+        anthropic: {
+          apiKey: '',
+          baseUrl: 'https://api.anthropic.com/v1/',
+          models: []
+        },
+        openai: {
+          apiKey: '',
+          baseUrl: 'https://api.openai.com/v1/',
+          models: []
+        }
+      }
     }
   }
 
@@ -134,36 +148,62 @@ export class ConfigService extends BaseService {
 
   /**
    * 保存 API Key 到 OpenClaw 配置（只更新 apiKey 字段，保留其他配置）
+   * @param provider 提供商名称，默认为 'zai'
    */
-  saveAPIKey(_provider: APIProvider, apiKey: string): boolean {
+  saveAPIKey(provider: APIProvider, apiKey: string): boolean {
     try {
       const openClawConfig = this.readOpenClawConfig()
 
-      // 确保 models.providers.zai 结构存在（不覆盖已有配置）
+      // 确保 models.providers 结构存在
       if (!openClawConfig.models) {
         openClawConfig.models = { mode: 'merge', providers: {} }
       }
       if (!openClawConfig.models.providers) {
         openClawConfig.models.providers = {}
       }
-      if (!openClawConfig.models.providers.zai) {
-        openClawConfig.models.providers.zai = {
-          baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+
+      // 获取 provider 的默认配置
+      const providerDefaults: Record<APIProvider, { baseUrl: string }> = {
+        zai: { baseUrl: 'https://open.bigmodel.cn/api/paas/v4/' },
+        anthropic: { baseUrl: 'https://api.anthropic.com/v1/' },
+        openai: { baseUrl: 'https://api.openai.com/v1/' }
+      }
+
+      // 确保 provider 结构存在（不覆盖已有配置）
+      if (!openClawConfig.models.providers[provider]) {
+        openClawConfig.models.providers[provider] = {
+          baseUrl: providerDefaults[provider].baseUrl,
           apiKey: '',
           models: []
         }
       }
 
       // 只更新 apiKey 字段，保留其他所有配置不变
-      openClawConfig.models.providers.zai.apiKey = apiKey
+      openClawConfig.models.providers[provider].apiKey = apiKey
 
       // 写入配置
       const result = this.writeOpenClawConfig(openClawConfig)
 
       // 更新内存配置
-      this.config.claw.apiKey = apiKey
+      if (provider === (this.config.claw.provider || 'zai')) {
+        this.config.claw.apiKey = apiKey
+      }
 
-      loggerSuccess(`API Key 已保存`, LOG_SOURCE)
+      // 更新 providers 配置
+      if (!this.config.providers) {
+        this.config.providers = {
+          zai: { apiKey: '', models: [] },
+          anthropic: { apiKey: '', models: [] },
+          openai: { apiKey: '', models: [] }
+        }
+      }
+      const providers = this.config.providers
+      if (!providers[provider]) {
+        providers[provider] = { apiKey: '', models: [] }
+      }
+      providers[provider]!.apiKey = apiKey
+
+      loggerSuccess(`API Key 已保存 [${provider}]`, LOG_SOURCE)
       return result
     } catch (error) {
       loggerError(`保存 API Key 失败: ${error}`, LOG_SOURCE)
@@ -173,11 +213,12 @@ export class ConfigService extends BaseService {
 
   /**
    * 获取 API Key
+   * @param provider 提供商名称，默认为 'zai'
    */
-  getAPIKey(_provider: APIProvider): string {
+  getAPIKey(provider: APIProvider = 'zai'): string {
     try {
       const openClawConfig = this.readOpenClawConfig()
-      return openClawConfig?.models?.providers?.zai?.apiKey || ''
+      return openClawConfig?.models?.providers?.[provider]?.apiKey || ''
     } catch (error) {
       loggerError(`获取 API Key 失败: ${error}`, LOG_SOURCE)
       return ''
@@ -186,15 +227,47 @@ export class ConfigService extends BaseService {
 
   /**
    * 获取模型列表
+   * @param provider 提供商名称，不传则返回所有提供商的模型
+   * @returns 模型列表，id 包含 provider 前缀 (如 "zai/glm-4-flash")
    */
-  getModelsList(): { id: string; name: string }[] {
+  getModelsList(
+    provider?: APIProvider
+  ): { id: string; name: string; provider: APIProvider }[] {
     try {
       const openClawConfig = this.readOpenClawConfig()
-      const models = openClawConfig?.models?.providers?.zai?.models || []
-      return models.map((m: any) => ({
-        id: m.id || m.name,
-        name: m.name || m.id
-      }))
+      const providers = openClawConfig?.models?.providers || {}
+      const result: { id: string; name: string; provider: APIProvider }[] = []
+
+      // 定义支持的提供商
+      const supportedProviders: APIProvider[] = ['zai', 'anthropic', 'openai']
+
+      if (provider) {
+        // 返回指定提供商的模型
+        const providerModels = providers[provider]?.models || []
+        providerModels.forEach((m: any) => {
+          const modelId = m.id || m.name
+          result.push({
+            id: `${provider}/${modelId}`,
+            name: m.name || modelId,
+            provider
+          })
+        })
+      } else {
+        // 返回所有提供商的模型
+        supportedProviders.forEach((p) => {
+          const providerModels = providers[p]?.models || []
+          providerModels.forEach((m: any) => {
+            const modelId = m.id || m.name
+            result.push({
+              id: `${p}/${modelId}`,
+              name: m.name || modelId,
+              provider: p
+            })
+          })
+        })
+      }
+
+      return result
     } catch (error) {
       loggerError(`获取模型列表失败: ${error}`, LOG_SOURCE)
       return []
@@ -202,14 +275,12 @@ export class ConfigService extends BaseService {
   }
 
   /**
-   * 获取当前选中的模型
+   * 获取当前选中的模型（包含 provider 前缀）
    */
   getCurrentModel(): string {
     try {
       const openClawConfig = this.readOpenClawConfig()
-      const primary = openClawConfig?.agents?.defaults?.model?.primary || ''
-      // 移除 "zai/" 前缀
-      return primary.replace(/^zai\//, '')
+      return openClawConfig?.agents?.defaults?.model?.primary || ''
     } catch (error) {
       loggerError(`获取当前模型失败: ${error}`, LOG_SOURCE)
       return ''
@@ -218,17 +289,87 @@ export class ConfigService extends BaseService {
 
   /**
    * 获取 Base URL
+   * @param provider 提供商名称，默认为 'zai'
    */
-  getBaseUrl(): string {
+  getBaseUrl(provider: APIProvider = 'zai'): string {
     try {
       const openClawConfig = this.readOpenClawConfig()
+      const providerDefaults: Record<APIProvider, string> = {
+        zai: 'https://open.bigmodel.cn/api/paas/v4/',
+        anthropic: 'https://api.anthropic.com/v1/',
+        openai: 'https://api.openai.com/v1/'
+      }
       return (
-        openClawConfig?.models?.providers?.zai?.baseUrl ||
-        'https://open.bigmodel.cn/api/paas/v4/'
+        openClawConfig?.models?.providers?.[provider]?.baseUrl ||
+        providerDefaults[provider]
       )
     } catch (error) {
       loggerError(`获取 Base URL 失败: ${error}`, LOG_SOURCE)
       return 'https://open.bigmodel.cn/api/paas/v4/'
+    }
+  }
+
+  /**
+   * 获取所有 Provider 配置
+   * @returns 所有 Provider 的配置信息
+   */
+  getProviders(): Record<APIProvider, ProviderConfig> {
+    try {
+      const openClawConfig = this.readOpenClawConfig()
+      const providersConfig = openClawConfig?.models?.providers || {}
+
+      // 定义默认配置
+      const defaultProviders: Record<APIProvider, ProviderConfig> = {
+        zai: {
+          apiKey: '',
+          baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+          models: []
+        },
+        anthropic: {
+          apiKey: '',
+          baseUrl: 'https://api.anthropic.com/v1/',
+          models: []
+        },
+        openai: {
+          apiKey: '',
+          baseUrl: 'https://api.openai.com/v1/',
+          models: []
+        }
+      }
+
+      // 合并配置文件中的值
+      const supportedProviders: APIProvider[] = ['zai', 'anthropic', 'openai']
+      supportedProviders.forEach((provider) => {
+        const config = providersConfig[provider]
+        if (config) {
+          defaultProviders[provider] = {
+            apiKey: config.apiKey || '',
+            baseUrl: config.baseUrl || defaultProviders[provider].baseUrl,
+            models: config.models || []
+          }
+        }
+      })
+
+      return defaultProviders
+    } catch (error) {
+      loggerError(`获取 Providers 配置失败: ${error}`, LOG_SOURCE)
+      return {
+        zai: {
+          apiKey: '',
+          baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',
+          models: []
+        },
+        anthropic: {
+          apiKey: '',
+          baseUrl: 'https://api.anthropic.com/v1/',
+          models: []
+        },
+        openai: {
+          apiKey: '',
+          baseUrl: 'https://api.openai.com/v1/',
+          models: []
+        }
+      }
     }
   }
 
@@ -258,7 +399,10 @@ export class ConfigService extends BaseService {
       }
       // 其次从配置文件读取
       const openClawConfig = this.readOpenClawConfig()
-      return openClawConfig?.gateway?.baseUrl || `http://localhost:${getGatewayPort()}`
+      return (
+        openClawConfig?.gateway?.baseUrl ||
+        `http://localhost:${getGatewayPort()}`
+      )
     } catch (error) {
       loggerError(`获取 Gateway Base URL 失败: ${error}`, LOG_SOURCE)
       return `http://localhost:${getGatewayPort()}`
@@ -290,11 +434,6 @@ export class ConfigService extends BaseService {
    * 加载配置
    */
   private loadConfig(): void {
-    // 从 OpenClaw 配置文件加载 API Key
-    const apiKey = this.getAPIKey('zhipu')
-    if (apiKey) {
-      this.config.claw.apiKey = apiKey
-    }
     // 从 OpenClaw 配置文件加载 Gateway Token
     const gatewayToken = this.getGatewayToken()
     if (gatewayToken) {
@@ -312,7 +451,7 @@ export class ConfigService extends BaseService {
    */
   getConfig(): AppConfig {
     // 获取当前 API Key
-    const apiKey = this.getAPIKey('zhipu')
+    const apiKey = this.getAPIKey('zai')
     // 获取当前 Gateway Token
     const gatewayToken = this.getGatewayToken()
     // 获取当前 Gateway Base URL
@@ -343,7 +482,7 @@ export class ConfigService extends BaseService {
 
       // 如果有 API Key 更新，保存到 OpenClaw 配置
       if (newConfig.claw?.apiKey) {
-        this.saveAPIKey('zhipu', newConfig.claw.apiKey)
+        this.saveAPIKey('zai', newConfig.claw.apiKey)
       }
 
       // 同步到 OpenClaw 配置文件
@@ -380,7 +519,7 @@ export class ConfigService extends BaseService {
       }
 
       // 只更新 apiKey 字段，保留其他所有配置不变
-      const apiKey = this.getAPIKey('zhipu')
+      const apiKey = this.getAPIKey('zai')
       openClawConfig.models.providers.zai.apiKey = apiKey
 
       // 写入配置
@@ -410,85 +549,6 @@ export class ConfigService extends BaseService {
     } catch (error) {
       loggerError(`重启 OpenClaw 失败: ${error}`, LOG_SOURCE)
     }
-  }
-
-  /**
-   * 启动健康检查
-   */
-  startHealthCheck(port: number = 18789): void {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval)
-    }
-
-    const checkHealth = async (): Promise<void> => {
-      try {
-        const response = await axios.get(
-          `http://localhost:${port}/api/health`,
-          {
-            timeout: 3000
-          }
-        )
-
-        if (response.status === 200) {
-          this.setHealthStatus('online')
-        } else {
-          this.setHealthStatus('offline')
-        }
-      } catch {
-        // 检查进程是否在启动中
-        if (this.launcherService) {
-          const status = this.launcherService.getStatus()
-          if (status.status === 'starting' || status.status === 'initialized') {
-            this.setHealthStatus('starting')
-          } else {
-            this.setHealthStatus('offline')
-          }
-        } else {
-          this.setHealthStatus('offline')
-        }
-      }
-    }
-
-    // 立即检查一次
-    checkHealth()
-
-    // 每 5 秒检查一次
-    this.healthCheckInterval = setInterval(checkHealth, 5000)
-  }
-
-  /**
-   * 停止健康检查
-   */
-  stopHealthCheck(): void {
-    if (this.healthCheckInterval) {
-      clearInterval(this.healthCheckInterval)
-      this.healthCheckInterval = null
-    }
-  }
-
-  /**
-   * 设置健康状态并通知渲染进程
-   */
-  private setHealthStatus(status: HealthStatus): void {
-    if (this.currentHealthStatus !== status) {
-      this.currentHealthStatus = status
-      loggerInfo(`OpenClaw 健康状态: ${status}`, LOG_SOURCE)
-
-      // 通知所有窗口
-      BrowserWindow.getAllWindows().forEach((window) => {
-        window.webContents.send('claw-health-update', {
-          status,
-          timestamp: Date.now()
-        })
-      })
-    }
-  }
-
-  /**
-   * 获取当前健康状态
-   */
-  getHealthStatus(): HealthStatus {
-    return this.currentHealthStatus
   }
 
   /**

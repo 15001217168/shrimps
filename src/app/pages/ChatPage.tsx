@@ -215,10 +215,8 @@ export function ChatPage() {
     if (configState) {
       const { currentModel } = configState
 
-      const current = configState.models.find((i) => i.id == currentModel)
-      if (current) {
-        setSelectedModel(current.name)
-      }
+      setSelectedModel(currentModel)
+
       setModels([...configState.models])
     }
   }, [configState])
@@ -452,10 +450,10 @@ export function ChatPage() {
                           >
                             <div>
                               <div className='text-sm font-medium text-zinc-200 group-hover:text-white'>
-                                {model.name}
+                                {model.id}
                               </div>
                             </div>
-                            {selectedModel === model.name && (
+                            {selectedModel === model.id && (
                               <Check className='w-4 h-4 text-orange-500' />
                             )}
                           </button>

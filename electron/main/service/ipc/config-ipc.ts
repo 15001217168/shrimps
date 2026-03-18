@@ -89,20 +89,18 @@ export function registerConfigIPC(): void {
   // 获取设置数据（API Key + 模型列表）
   ipcMain.handle('config:get-settings', async () => {
     try {
-      const apiKey = configService.getAPIKey('zhipu')
+      const provider = configService.getProviders()
       const models = configService.getModelsList()
       const currentModel = configService.getCurrentModel()
-      const baseUrl = configService.getBaseUrl()
       const gatewayToken = configService.getGatewayToken()
       const gatewayBaseUrl = configService.getGatewayBaseUrl()
 
       return {
         success: true,
         data: {
-          apiKey,
+          provider,
           models,
           currentModel,
-          baseUrl,
           gateway: {
             baseUrl: gatewayBaseUrl,
             auth: {
@@ -134,17 +132,6 @@ export function registerConfigIPC(): void {
     }
   )
 
-  // 获取健康状态
-  ipcMain.handle('config:get-health', async () => {
-    return {
-      success: true,
-      data: {
-        status: configService.getHealthStatus(),
-        timestamp: Date.now()
-      }
-    }
-  })
-
   // 打开配置目录
   ipcMain.handle('config:open-dir', async () => {
     try {
@@ -155,18 +142,6 @@ export function registerConfigIPC(): void {
       loggerError(`打开配置目录失败: ${errMsg}`, LOG_SOURCE)
       return { success: false, error: errMsg }
     }
-  })
-
-  // 启动健康检查
-  ipcMain.handle('config:start-health-check', async (_event, port?: number) => {
-    configService.startHealthCheck(port || 18789)
-    return { success: true }
-  })
-
-  // 停止健康检查
-  ipcMain.handle('config:stop-health-check', async () => {
-    configService.stopHealthCheck()
-    return { success: true }
   })
 
   loggerSuccess('配置服务 IPC 已注册', LOG_SOURCE)

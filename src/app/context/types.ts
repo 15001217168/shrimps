@@ -23,26 +23,16 @@ export interface ModelInfo {
 
 /** 配置数据接口 */
 export interface ConfigData {
-  /** API Key 值 */
-  apiKey: string
-  /** 是否已设置 API Key */
-  hasApiKey: boolean
-  /** API 提供商 */
-  apiProvider: APIProvider
-  /** 可用模型列表 */
-  models: readonly ModelInfo[]
-  /** 当前选中的模型 ID */
+  provider: any
+  models: ModelInfo[]
   currentModel: string
-  /** API Base URL */
-  baseUrl: string
-  /** 服务端口 */
-  port: number
-  /** 是否调试模式 */
-  debug: boolean
-  /** 健康状态 */
-  healthStatus: HealthStatus
-  /** 最后健康检查时间戳 */
-  lastHealthCheck: number | null
+  gateway?: {
+    baseUrl: string
+    auth: {
+      mode: 'token'
+      token: string
+    }
+  }
 }
 
 /** 配置上下文值接口 */
