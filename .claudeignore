@@ -1,0 +1,66 @@
+# --- 依赖与包管理器 ---
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# --- 构建产物与缓存 ---
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+*.pyc
+__pycache__/
+target/           # Rust/Java
+bin/              # .NET/C++
+obj/
+
+# --- 版本控制与 IDE 配置 ---
+.git/
+.svn/
+.hg/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# --- 静态资源 (Token 杀手：Claude 看不懂图片，但读取它们很贵) ---
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.mp4
+*.mov
+*.pdf
+*.zip
+*.tar.gz
+public/assets/
+public/fonts/
+
+# --- 日志与临时文件 ---
+*.log
+logs/
+temp/
+tmp/
+.env* # 保护你的 API Key 不被意外读取发送
+!.env.example     # 可以保留模版供 Claude 参考结构
+
+# --- 测试覆盖率与报告 ---
+coverage/
+.nyc_output/
+htmlcov/
+
+# --- 文档与大数据文件 (可选) ---
+# 如果你的项目里有巨大的 CSV 或 JSON 数据集，务必排除
+*.csv
+*.jsonl
+# docs/           # 如果不需要 Claude 帮你写文档，可以关掉
