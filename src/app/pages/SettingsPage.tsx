@@ -99,12 +99,15 @@ export function SettingsPage() {
       console.log('config:get-json', res)
       if (res && res.success == true) {
         setJsonConfig(res.data)
-        setTimeout(() => {
-          formatJson()
-        }, 100)
       }
     })
   }, [connectionState, configState])
+
+  useEffect(() => {
+    if (activeTab == 'json') {
+      formatJson()
+    }
+  }, [activeTab])
 
   const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value

@@ -189,10 +189,12 @@ export function DesktopLayout() {
                 />
                 <button className='w-full flex items-center gap-2 px-2 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors mt-2'>
                   <div className='w-6 h-6 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white text-[10px] font-bold shadow-inner border border-white/10'>
-                    JS
+                    HV
                   </div>
-                  <span className='flex-1 text-left truncate'>John Smith</span>
-                  <MoreHorizontal className='w-4 h-4 opacity-50' />
+                  <span className='flex-1 text-left truncate'>
+                    Helper Virus
+                  </span>
+                  {/* <MoreHorizontal className='w-4 h-4 opacity-50' /> */}
                 </button>
               </div>
             </motion.aside>
