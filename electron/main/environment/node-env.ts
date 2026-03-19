@@ -582,6 +582,6 @@ export class NodeEnvService extends BaseService {
 
 // 导出单例访问方法
 export const getNodeEnvService = (): NodeEnvService =>
-  NodeEnvService.getInstance<NodeEnvService>()
+  NodeEnvService.getInstance() as NodeEnvService
 
 export default NodeEnvService

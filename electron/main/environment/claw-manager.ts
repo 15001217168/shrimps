@@ -523,7 +523,7 @@ export class ClawManager extends BaseService {
  * 便捷的启动函数
  */
 export async function startClaw(options?: StartOptions): Promise<ChildProcess> {
-  const manager = ClawManager.getInstance<ClawManager>()
+  const manager = ClawManager.getInstance() as ClawManager
   return manager.start(options)
 }
 
@@ -531,7 +531,7 @@ export async function startClaw(options?: StartOptions): Promise<ChildProcess> {
  * 便捷的停止函数
  */
 export async function stopClaw(timeout?: number): Promise<void> {
-  const manager = ClawManager.getInstance<ClawManager>()
+  const manager = ClawManager.getInstance() as ClawManager
   return manager.stop(timeout)
 }
 
@@ -539,7 +539,7 @@ export async function stopClaw(timeout?: number): Promise<void> {
  * 获取 OpenClaw 状态
  */
 export function getClawStatus(): ClawStatus {
-  const manager = ClawManager.getInstance<ClawManager>()
+  const manager = ClawManager.getInstance() as ClawManager
   return manager.getStatus()
 }
 
@@ -547,12 +547,12 @@ export function getClawStatus(): ClawStatus {
  * 检查 OpenClaw 是否运行
  */
 export function isClawRunning(): boolean {
-  const manager = ClawManager.getInstance<ClawManager>()
+  const manager = ClawManager.getInstance() as ClawManager
   return manager.isRunning()
 }
 
 // 导出单例访问方法
 export const getClawManager = (): ClawManager =>
-  ClawManager.getInstance<ClawManager>()
+  ClawManager.getInstance() as ClawManager
 
 export default ClawManager

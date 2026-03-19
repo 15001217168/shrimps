@@ -328,6 +328,6 @@ export class LauncherService extends BaseService {
 
 // 导出单例访问方法
 export const getLauncherService = (): LauncherService =>
-  LauncherService.getInstance<LauncherService>()
+  LauncherService.getInstance() as LauncherService
 
 export default LauncherService

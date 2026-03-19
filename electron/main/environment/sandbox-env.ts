@@ -477,6 +477,6 @@ export class SandboxEnvService extends BaseService {
 
 // 导出单例访问方法
 export const getSandboxEnvService = (): SandboxEnvService =>
-  SandboxEnvService.getInstance<SandboxEnvService>()
+  SandboxEnvService.getInstance() as SandboxEnvService
 
 export default SandboxEnvService

@@ -436,8 +436,6 @@ export class ConfigService extends BaseService {
         openClawConfig.models.providers.zai.apiKey = ''
         this.writeOpenClawConfig(openClawConfig)
       }
-
-      this.config.claw.apiKey = ''
       loggerInfo(`API Key 已删除`, LOG_SOURCE)
       return true
     } catch (error) {
@@ -532,6 +530,6 @@ export class ConfigService extends BaseService {
 
 // 导出单例访问方法
 export const getConfigService = (): ConfigService =>
-  ConfigService.getInstance<ConfigService>()
+  ConfigService.getInstance() as ConfigService
 
 export default ConfigService

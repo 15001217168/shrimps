@@ -3,7 +3,11 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import os from 'node:os'
-import { getLauncherService, registerAllIPC, initializeServices } from './service'
+import {
+  getLauncherService,
+  registerAllIPC,
+  initializeServices
+} from './service'
 
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -55,7 +59,6 @@ async function createWindow() {
     titleBarStyle: 'hidden',
     backgroundColor: '#ffffff',
     titleBarOverlay: { height: 32, color: '#00000000' },
-    icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
     webPreferences: {
       preload
       // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
@@ -88,7 +91,9 @@ async function createWindow() {
   })
 
   win.on('closed', () => {
-    getLauncherService().stopClaw().catch(() => {})
+    getLauncherService()
+      .stopClaw()
+      .catch(() => {})
   })
 
   // 初始化服务依赖

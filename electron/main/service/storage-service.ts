@@ -312,6 +312,6 @@ export class StorageService extends BaseService {
 
 // 导出单例访问方法
 export const getStorageService = (): StorageService =>
-  StorageService.getInstance<StorageService>()
+  StorageService.getInstance() as StorageService
 
 export default StorageService

@@ -196,6 +196,6 @@ export class SqliteService extends BaseService {
 
 // 导出单例访问方法
 export const getSqliteService = (): SqliteService =>
-  SqliteService.getInstance<SqliteService>()
+  SqliteService.getInstance() as SqliteService
 
 export default SqliteService

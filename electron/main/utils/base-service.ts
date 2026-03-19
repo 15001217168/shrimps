@@ -13,20 +13,21 @@ const serviceInstances: Map<string, any> = new Map()
 export abstract class BaseService {
   /**
    * 获取单例实例
+   * 使用 any 类型绕过 TypeScript 构造函数可见性检查
    */
-  static getInstance<T extends BaseService>(this: { new (): T; name: string }): T {
-    const className = this.name
+  static getInstance(): any {
+    const className = (this as any).name
     if (!serviceInstances.has(className)) {
-      serviceInstances.set(className, new this())
+      serviceInstances.set(className, new (this as any)())
     }
-    return serviceInstances.get(className) as T
+    return serviceInstances.get(className)
   }
 
   /**
    * 重置单例实例（用于测试）
    */
-  static resetInstance<T extends BaseService>(this: { new (): T; name: string }): void {
-    const className = this.name
+  static resetInstance(): void {
+    const className = (this as any).name
     serviceInstances.delete(className)
   }
 

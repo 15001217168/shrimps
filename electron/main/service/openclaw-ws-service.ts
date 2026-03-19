@@ -988,6 +988,6 @@ export class OpenClawWSService extends BaseService {
 
 // 导出单例访问方法
 export const getOpenClawWSService = (): OpenClawWSService =>
-  OpenClawWSService.getInstance<OpenClawWSService>()
+  OpenClawWSService.getInstance() as OpenClawWSService
 
 export default OpenClawWSService
