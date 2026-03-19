@@ -33,6 +33,16 @@ export interface ConfigData {
       token: string
     }
   }
+  // API Key 相关
+  apiKey?: string
+  hasApiKey?: boolean
+  apiProvider?: APIProvider
+  // 服务相关
+  baseUrl?: string
+  port?: number
+  debug?: boolean
+  healthStatus?: HealthStatus
+  lastHealthCheck?: number | null
 }
 
 /** 配置上下文值接口 */
@@ -121,17 +131,9 @@ export function isCompleteConfig(
   config: Partial<ConfigData>
 ): config is ConfigData {
   return (
-    typeof config.apiKey === 'string' &&
-    typeof config.hasApiKey === 'boolean' &&
-    typeof config.apiProvider === 'string' &&
+    typeof config.provider === 'object' &&
     Array.isArray(config.models) &&
-    typeof config.currentModel === 'string' &&
-    typeof config.baseUrl === 'string' &&
-    typeof config.port === 'number' &&
-    typeof config.debug === 'boolean' &&
-    typeof config.healthStatus === 'string' &&
-    (config.lastHealthCheck === null ||
-      typeof config.lastHealthCheck === 'number')
+    typeof config.currentModel === 'string'
   )
 }
 

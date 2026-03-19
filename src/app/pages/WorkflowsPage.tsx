@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { 
-  Network, Plus, ArrowLeft, Play, Save, Settings, Trash2, 
-  Users, Code, Search, MessageSquare, Database, FileText, 
+import {
+  Network, Plus, ArrowLeft, Play, Save, Settings, Trash2,
+  Users, Code, Search, MessageSquare, Database, FileText,
   Globe, GitBranch, LayoutGrid, Clock, PenTool, ChevronRight, Zap
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import clsx from "clsx";
 import { toast } from "sonner";
 import { Modal } from "../components/Modal";
+import { useLanguage } from "../context";
 
 // Block Types
 type NodeType = "trigger" | "agent" | "skill" | "action";
@@ -84,6 +85,7 @@ export function WorkflowsPage() {
   const [view, setView] = useState<'list' | 'builder'>('list');
   const [workspaces, setWorkspaces] = useState<Workspace[]>(INITIAL_WORKSPACES);
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const { t } = useLanguage();
 
   // Builder State
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -112,7 +114,7 @@ export function WorkflowsPage() {
     if (activeWorkspace) {
       const updated = { ...activeWorkspace, nodes };
       setWorkspaces(workspaces.map(w => w.id === updated.id ? updated : w));
-      toast.success('Workflow saved successfully.');
+      toast.success(t('workflows.workflowSaved'));
     }
   };
 
@@ -146,7 +148,7 @@ export function WorkflowsPage() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden">
+    <div className="h-full flex flex-col bg-background text-foreground overflow-hidden">
       <AnimatePresence mode="wait">
         {view === 'list' && (
           <motion.div 
@@ -159,17 +161,17 @@ export function WorkflowsPage() {
             <div className="flex items-center justify-between mb-8 max-w-7xl mx-auto w-full">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                  <LayoutGrid className="w-6 h-6 text-orange-500" />
-                  Workspaces
+                  <LayoutGrid className="w-6 h-6 text-primary" />
+                  {t('workflows.title')}
                 </h1>
-                <p className="text-zinc-400 mt-1">Manage and orchestrate complex multi-agent workflows.</p>
+                <p className="text-muted-foreground mt-1">{t('workflows.subtitle')}</p>
               </div>
               <button
                 onClick={createWorkspace}
-                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20"
+                className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20"
               >
                 <Plus className="w-4 h-4" />
-                New Workspace
+                {t('workflows.newWorkspace')}
               </button>
             </div>
 
@@ -178,38 +180,38 @@ export function WorkflowsPage() {
                 <div 
                   key={ws.id}
                   onClick={() => openBuilder(ws)}
-                  className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 hover:shadow-lg hover:-translate-y-0.5 transition-all group cursor-pointer flex flex-col"
+                  className="bg-card border border-border rounded-2xl p-6 hover:border-border-hover hover:shadow-lg hover:-translate-y-0.5 transition-all group cursor-pointer flex flex-col"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 shadow-inner">
                       <Network className="w-6 h-6" />
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-mono bg-zinc-950 px-2 py-1 rounded border border-zinc-800">
+                    <span className="text-[10px] text-muted-foreground font-mono bg-background px-2 py-1 rounded border border-border">
                       {ws.updatedAt}
                     </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-zinc-100 mb-2 group-hover:text-orange-400 transition-colors">{ws.name}</h3>
-                  <p className="text-sm text-zinc-400 line-clamp-2 mb-6 flex-1">
+                  <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">{ws.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mb-6 flex-1">
                     {ws.description}
                   </p>
                   
-                  <div className="flex items-center gap-3 border-t border-zinc-800/80 pt-4">
+                  <div className="flex items-center gap-3 border-t border-border/80 pt-4">
                     <div className="flex -space-x-2">
                       {ws.nodes.slice(0, 4).map((n, i) => {
                         const Icon = ICON_MAP[n.icon] || Search;
                         return (
-                          <div key={i} className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center shrink-0" title={n.title}>
+                          <div key={i} className="w-6 h-6 rounded-full bg-secondary border-2 border-card flex items-center justify-center shrink-0" title={n.title}>
                             <Icon className={clsx("w-3 h-3", n.color)} />
                           </div>
                         )
                       })}
                       {ws.nodes.length > 4 && (
-                        <div className="w-6 h-6 rounded-full bg-zinc-800 border-2 border-zinc-900 flex items-center justify-center shrink-0 text-[9px] font-bold text-zinc-400">
+                        <div className="w-6 h-6 rounded-full bg-secondary border-2 border-card flex items-center justify-center shrink-0 text-[9px] font-bold text-muted-foreground">
                           +{ws.nodes.length - 4}
                         </div>
                       )}
                     </div>
-                    <span className="text-xs text-zinc-500 font-medium">{ws.nodes.length} Blocks</span>
+                    <span className="text-xs text-muted-foreground font-medium">{ws.nodes.length} {t('workflows.blocks')}</span>
                   </div>
                 </div>
               ))}
@@ -223,43 +225,43 @@ export function WorkflowsPage() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="flex-1 flex flex-col overflow-hidden bg-zinc-950"
+            className="flex-1 flex flex-col overflow-hidden bg-background"
           >
             {/* Builder Header */}
-            <div className="h-14 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between px-4 shrink-0 z-10 relative">
+            <div className="h-14 border-b border-border bg-card/50 flex items-center justify-between px-4 shrink-0 z-10 relative">
               <div className="flex items-center gap-4">
                 <button 
                   onClick={() => setView('list')}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-colors flex items-center gap-1"
+                  className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-colors flex items-center gap-1"
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <div className="h-4 w-px bg-zinc-700"></div>
+                <div className="h-4 w-px bg-border-hover"></div>
                 <div className="flex items-center gap-2">
-                  <Network className="w-4 h-4 text-orange-500" />
+                  <Network className="w-4 h-4 text-primary" />
                   <input 
                     type="text" 
                     value={activeWorkspace?.name || ''} 
                     onChange={(e) => setActiveWorkspace(prev => prev ? {...prev, name: e.target.value} : null)}
-                    className="bg-transparent border-none text-zinc-100 font-semibold focus:outline-none focus:ring-0 w-64 hover:bg-zinc-800/50 px-2 py-1 rounded transition-colors"
+                    className="bg-transparent border-none text-foreground font-semibold focus:outline-none focus:ring-0 w-64 hover:bg-secondary/50 px-2 py-1 rounded transition-colors"
                   />
                 </div>
               </div>
               
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => toast("Running workflow sandbox...")}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-md text-sm font-medium transition-colors border border-zinc-700/50"
+                <button
+                  onClick={() => toast(t('workflows.runningTest'))}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-secondary hover:bg-border-hover text-foreground rounded-md text-sm font-medium transition-colors border border-border-hover/50"
                 >
                   <Play className="w-4 h-4 text-green-400" />
-                  Test Run
+                  {t('workflows.testRun')}
                 </button>
-                <button 
+                <button
                   onClick={saveWorkspace}
-                  className="flex items-center gap-2 px-4 py-1.5 bg-orange-600 hover:bg-orange-500 text-white rounded-md text-sm font-medium transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-4 py-1.5 bg-primary hover:bg-primary-hover text-white rounded-md text-sm font-medium transition-colors shadow-sm"
                 >
                   <Save className="w-4 h-4" />
-                  Save
+                  {t('workflows.save')}
                 </button>
               </div>
             </div>
@@ -267,27 +269,27 @@ export function WorkflowsPage() {
             {/* Builder Main Area */}
             <div className="flex-1 flex overflow-hidden">
               {/* Toolbox Sidebar */}
-              <div className="w-64 border-r border-zinc-800 bg-zinc-900/30 overflow-y-auto p-4 shrink-0 scrollbar-thin scrollbar-thumb-zinc-700 hidden md:block">
-                <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-4">Components</h3>
+              <div className="w-64 border-r border-border bg-card/30 overflow-y-auto p-4 shrink-0 scrollbar-thin scrollbar-thumb-scrollbar-thumb hidden md:block">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t('workflows.components')}</h3>
                 
                 <div className="space-y-6">
                   {TOOLBOX_ITEMS.map((cat, i) => (
                     <div key={i}>
-                      <h4 className="text-sm font-medium text-zinc-300 mb-2">{cat.category}</h4>
+                      <h4 className="text-sm font-medium text-foreground mb-2">{cat.category}</h4>
                       <div className="space-y-2">
                         {cat.items.map((item, j) => {
                           const Icon = ICON_MAP[item.icon] || Code;
                           return (
                             <div 
                               key={j}
-                              className="flex items-center gap-3 p-2 rounded-lg bg-zinc-950 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/5 cursor-grab transition-colors"
+                              className="flex items-center gap-3 p-2 rounded-lg bg-background border border-border hover:border-primary/50 hover:bg-primary/5 cursor-grab transition-colors"
                             >
-                              <div className="w-7 h-7 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
+                              <div className="w-7 h-7 rounded bg-card border border-border flex items-center justify-center shrink-0">
                                 <Icon className={clsx("w-3.5 h-3.5", item.color)} />
                               </div>
                               <div>
-                                <div className="text-sm font-medium text-zinc-200">{item.title}</div>
-                                <div className="text-[10px] text-zinc-500">{item.description}</div>
+                                <div className="text-sm font-medium text-foreground">{item.title}</div>
+                                <div className="text-[10px] text-muted-foreground">{item.description}</div>
                               </div>
                             </div>
                           )
@@ -299,7 +301,7 @@ export function WorkflowsPage() {
               </div>
 
               {/* Canvas Area */}
-              <div className="flex-1 bg-zinc-950 overflow-y-auto p-8 flex flex-col items-center relative scrollbar-thin scrollbar-thumb-zinc-800 background-grid">
+              <div className="flex-1 bg-background overflow-y-auto p-8 flex flex-col items-center relative scrollbar-thin scrollbar-thumb-scrollbar-thumb background-grid">
                 {/* Background Pattern */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
                      style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}>
@@ -309,13 +311,13 @@ export function WorkflowsPage() {
                   <AnimatePresence>
                     {nodes.length === 0 && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
-                        <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4 text-zinc-500">
+                        <div className="w-16 h-16 rounded-full bg-card border border-border flex items-center justify-center mx-auto mb-4 text-muted-foreground">
                           <Zap className="w-8 h-8" />
                         </div>
-                        <h3 className="text-lg font-medium text-zinc-300 mb-2">Empty Workflow</h3>
-                        <p className="text-zinc-500 text-sm mb-6 max-w-sm">Start building by adding a trigger or your first agent node.</p>
-                        <button onClick={() => handleAddNodeRequest(-1)} className="px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-900 rounded-lg text-sm font-semibold transition-colors">
-                          Add First Node
+                        <h3 className="text-lg font-medium text-foreground mb-2">{t('workflows.emptyWorkflow')}</h3>
+                        <p className="text-muted-foreground text-sm mb-6 max-w-sm">{t('workflows.emptyWorkflowDesc')}</p>
+                        <button onClick={() => handleAddNodeRequest(-1)} className="px-4 py-2 bg-primary-foreground hover:bg-primary-foreground text-zinc-900 rounded-lg text-sm font-semibold transition-colors">
+                          {t('workflows.addFirstNode')}
                         </button>
                       </motion.div>
                     )}
@@ -334,30 +336,30 @@ export function WorkflowsPage() {
                         >
                           {/* Node Card */}
                           <div className={clsx(
-                            "w-full max-w-lg bg-zinc-900 border rounded-xl p-4 shadow-xl flex items-center gap-4 group/node transition-colors hover:border-zinc-600 relative overflow-hidden",
-                            isTrigger ? "border-zinc-700 bg-zinc-900/80" : "border-zinc-800"
+                            "w-full max-w-lg bg-card border rounded-xl p-4 shadow-xl flex items-center gap-4 group/node transition-colors hover:border-border-hover relative overflow-hidden",
+                            isTrigger ? "border-border-hover bg-card/80" : "border-border"
                           )}>
                             {isTrigger && <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-500 to-blue-500" />}
                             
-                            <div className="w-10 h-10 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center shrink-0 shadow-inner group-hover/node:border-zinc-700 transition-colors">
+                            <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center shrink-0 shadow-inner group-hover/node:border-border-hover transition-colors">
                               <Icon className={clsx("w-5 h-5", node.color)} />
                             </div>
                             
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-0.5">
-                                <h4 className="text-[15px] font-semibold text-zinc-100 truncate">{node.title}</h4>
-                                <span className="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-500">
+                                <h4 className="text-[15px] font-semibold text-foreground truncate">{node.title}</h4>
+                                <span className="text-[10px] uppercase font-mono tracking-wider px-1.5 py-0.5 rounded bg-background border border-border text-muted-foreground">
                                   {node.type}
                                 </span>
                               </div>
-                              <p className="text-xs text-zinc-400 truncate">{node.description}</p>
+                              <p className="text-xs text-muted-foreground truncate">{node.description}</p>
                             </div>
                             
                             <div className="flex items-center gap-1 opacity-0 group-hover/node:opacity-100 transition-opacity">
-                              <button className="p-1.5 text-zinc-500 hover:text-orange-400 hover:bg-zinc-800 rounded transition-colors" title="Settings">
+                              <button className="p-1.5 text-muted-foreground/50 hover:text-primary hover:bg-secondary rounded transition-colors" title="Settings">
                                 <Settings className="w-4 h-4" />
                               </button>
-                              <button onClick={() => removeNode(node.id)} className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors" title="Remove">
+                              <button onClick={() => removeNode(node.id)} className="p-1.5 text-muted-foreground/50 hover:text-red-400 hover:bg-secondary rounded transition-colors" title="Remove">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -366,10 +368,10 @@ export function WorkflowsPage() {
                           {/* Connection Line & Insert Button */}
                           {index < nodes.length - 1 && (
                             <div className="relative flex flex-col items-center my-1 py-2 group/line w-full h-12">
-                              <div className="absolute top-0 bottom-0 w-0.5 bg-zinc-700 group-hover/line:bg-orange-500/50 transition-colors" />
+                              <div className="absolute top-0 bottom-0 w-0.5 bg-border-hover group-hover/line:bg-primary/50 transition-colors" />
                               <button 
                                 onClick={() => handleAddNodeRequest(index + 1)}
-                                className="absolute top-1/2 -translate-y-1/2 bg-zinc-800 border border-zinc-600 rounded-full p-1 opacity-0 group-hover/line:opacity-100 hover:bg-orange-500 hover:border-orange-500 text-zinc-400 hover:text-white transition-all z-10 shadow-lg scale-90 hover:scale-100"
+                                className="absolute top-1/2 -translate-y-1/2 bg-secondary border border-border-hover rounded-full p-1 opacity-0 group-hover/line:opacity-100 hover:bg-primary hover:border-primary text-muted-foreground hover:text-white transition-all z-10 shadow-lg scale-90 hover:scale-100"
                               >
                                 <Plus className="w-4 h-4" />
                               </button>
@@ -381,13 +383,13 @@ export function WorkflowsPage() {
 
                     {nodes.length > 0 && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 relative flex flex-col items-center">
-                        <div className="w-0.5 h-6 bg-zinc-800 mb-1" />
-                        <button 
+                        <div className="w-0.5 h-6 bg-border mb-1" />
+                        <button
                           onClick={() => handleAddNodeRequest(-1)}
-                          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border border-dashed border-zinc-700 hover:border-orange-500/50 hover:bg-orange-500/5 hover:text-orange-400 text-zinc-400 rounded-lg text-sm font-medium transition-all group"
+                          className="flex items-center gap-2 px-4 py-2 bg-card border border-dashed border-border-hover hover:border-primary/50 hover:bg-primary/5 hover:text-primary text-muted-foreground rounded-lg text-sm font-medium transition-all group"
                         >
                           <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                          Add Step
+                          {t('workflows.addStep')}
                         </button>
                       </motion.div>
                     )}
@@ -400,11 +402,11 @@ export function WorkflowsPage() {
       </AnimatePresence>
 
       {/* Select Node Modal */}
-      <Modal isOpen={isNodeModalOpen} onClose={() => setNodeModalOpen(false)} title="Add Node" width="lg">
+      <Modal isOpen={isNodeModalOpen} onClose={() => setNodeModalOpen(false)} title={t('workflows.addNode')} width="lg">
         <div className="space-y-6">
           {TOOLBOX_ITEMS.map((cat, i) => (
             <div key={i}>
-              <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-3">{cat.category}</h4>
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{cat.category}</h4>
               <div className="grid grid-cols-2 gap-3">
                 {cat.items.map((item, j) => {
                   const Icon = ICON_MAP[item.icon] || Code;
@@ -412,14 +414,14 @@ export function WorkflowsPage() {
                     <button 
                       key={j}
                       onClick={() => handleInsertNode(item)}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-zinc-950 border border-zinc-800 hover:border-orange-500/50 hover:bg-orange-500/5 transition-all text-left group"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-background border border-border hover:border-primary/50 hover:bg-primary/5 transition-all text-left group"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                      <div className="w-8 h-8 rounded-lg bg-card border border-border flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
                         <Icon className={clsx("w-4 h-4", item.color)} />
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-zinc-200 group-hover:text-orange-400 transition-colors">{item.title}</div>
-                        <div className="text-[10px] text-zinc-500 truncate w-32">{item.description}</div>
+                        <div className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{item.title}</div>
+                        <div className="text-[10px] text-muted-foreground truncate w-32">{item.description}</div>
                       </div>
                     </button>
                   )

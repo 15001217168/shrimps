@@ -20,21 +20,27 @@ import {
 import clsx from 'clsx'
 import { toast } from 'sonner'
 import { motion, AnimatePresence } from 'motion/react'
-import { useConnectionState, useConfigData } from '../context'
+import {
+  useConnectionState,
+  useConfigData,
+  useTheme,
+  useLanguage,
+  type ThemeMode
+} from '../context'
 
 export function SettingsPage() {
   const configState = useConfigData()
   const connectionState = useConnectionState()
+  const { theme, setTheme, saveTheme } = useTheme()
+  const {
+    t,
+    language: currentLanguage,
+    setLanguage: setAppLanguage
+  } = useLanguage()
   const [activeTab, setActiveTab] = useState('appearance')
 
   // Settings States
-  const [theme, setTheme] = useState('dark')
   const [language, setLanguage] = useState('en')
-
-  // API Keys
-  const [zhipuKey, setZhipuKey] = useState('')
-  const [openAIKey, setOpenAIKey] = useState('')
-  const [anthropicKey, setAnthropicKey] = useState('')
 
   // API Key visibility state
   const [visibleKeys, setVisibleKeys] = useState<Record<string, boolean>>({})
@@ -63,15 +69,18 @@ export function SettingsPage() {
   ])
 
   // JSON Config
-  const [jsonConfig, setJsonConfig] = useState(
-    `{\n  "version": "1.0.0",\n  "telemetry": false,\n  "sandbox": {\n    "memory_limit": "512m",\n    "timeout_seconds": 30\n  },\n  "experimental_features": ["agent_orchestration"]\n}`
-  )
+  const [jsonConfig, setJsonConfig] = useState(``)
   const [jsonError, setJsonError] = useState<string | null>(null)
+
+  // 初始化加载存储的语言设置
+  useEffect(() => {
+    setLanguage(currentLanguage)
+  }, [currentLanguage])
 
   useEffect(() => {
     console.log('[SettingsPage] 连接状态:', connectionState)
 
-    // 当连接成功时，获取聊天历史
+    // 当连接成功时，获取配置
     if (connectionState === 'connected') {
       console.log('[SettingsPage] 配置文件:', configState)
       const { provider } = configState
@@ -83,9 +92,19 @@ export function SettingsPage() {
         }
       })
 
-      setLLM((cur) => (cur = llmList))
+      setLLM(llmList)
     }
-  }, [connectionState])
+
+    window.ipcRenderer.invoke('config:get-json').then((res) => {
+      console.log('config:get-json', res)
+      if (res && res.success == true) {
+        setJsonConfig(res.data)
+        setTimeout(() => {
+          formatJson()
+        }, 100)
+      }
+    })
+  }, [connectionState, configState])
 
   const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value
@@ -109,19 +128,127 @@ export function SettingsPage() {
     }
   }
 
-  const resetJson = () => {
-    setJsonConfig(
-      `{\n  "version": "1.0.0",\n  "telemetry": false,\n  "sandbox": {\n    "memory_limit": "512m",\n    "timeout_seconds": 30\n  },\n  "experimental_features": ["agent_orchestration"]\n}`
-    )
-    setJsonError(null)
+  // 保存 Appearance 设置
+  const saveAppearance = async () => {
+    try {
+      // 保存主题到本地存储（通过全局 ThemeContext）
+      const success = await saveTheme()
+
+      if (success) {
+        console.log('[Settings] 主题已保存:', theme)
+        toast.success(t('settings.appearanceSaved'))
+      } else {
+        throw new Error('Save failed')
+      }
+    } catch (error) {
+      console.error('[Settings] 保存主题失败:', error)
+      toast.error(t('settings.saveFailed'))
+    }
   }
 
-  const handleSave = () => {
-    if (jsonError) {
-      toast.error('Please fix JSON errors before saving.')
-      return
+  // 保存 Language 设置
+  const saveLanguage = async () => {
+    try {
+      // 更新应用语言
+      setAppLanguage(language as 'en' | 'zh')
+
+      console.log('[Settings] 语言已保存:', language)
+      toast.success(t('settings.languageSaved'))
+    } catch (error) {
+      console.error('[Settings] 保存语言失败:', error)
+      toast.error(t('settings.saveFailed'))
     }
-    toast.success('Settings saved successfully.')
+  }
+
+  // 保存 LLM Providers 设置
+  const saveProviders = async () => {
+    try {
+      // 遍历所有 provider 并保存 API Key
+      for (const item of llm) {
+        await window.ipcRenderer.invoke(
+          'config:save-api-key',
+          item.provider,
+          item.apiKey
+        )
+      }
+      toast.success(t('settings.providersSaved'))
+    } catch (error) {
+      console.error('[Settings] 保存 Providers 设置失败:', error)
+      toast.error(t('settings.saveFailed'))
+    }
+  }
+
+  // 保存 Tokens & Local 设置
+  const saveTokens = async () => {
+    try {
+      // TODO: 调用 IPC 保存 tokens 和本地连接设置
+      console.log('[Settings] 保存 Tokens 设置:', {
+        localOllamaUrl,
+        githubToken,
+        tavilyToken
+      })
+      toast.success(t('settings.tokensSaved'))
+    } catch (error) {
+      toast.error(t('settings.saveFailed'))
+    }
+  }
+
+  // 保存 Channels 设置
+  const saveChannels = async () => {
+    try {
+      // TODO: 调用 IPC 保存 channels 设置
+      console.log('[Settings] 保存 Channels 设置:', channels)
+      toast.success(t('settings.channelsSaved'))
+    } catch (error) {
+      toast.error(t('settings.saveFailed'))
+    }
+  }
+
+  // 保存 JSON Config
+  const saveJsonConfig = async () => {
+    try {
+      if (jsonError) {
+        toast.error('Please fix JSON errors before saving.')
+        return false
+      }
+      // TODO: 调用 IPC 保存 JSON 配置
+      console.log('[Settings] 保存 JSON 配置:', jsonConfig)
+
+      window.ipcRenderer.invoke('config:save-json', jsonConfig).then((res) => {
+        console.log('config:save-json', res)
+      })
+      toast.success(t('settings.jsonSaved'))
+      return true
+    } catch (error) {
+      toast.error(t('settings.saveFailed'))
+      return false
+    }
+  }
+
+  // 根据 activeTab 保存对应设置
+  const handleSave = async () => {
+    switch (activeTab) {
+      case 'appearance':
+        await saveAppearance()
+        break
+      case 'language':
+        await saveLanguage()
+        break
+      case 'providers':
+        await saveProviders()
+        break
+      case 'tokens':
+        await saveTokens()
+        break
+      case 'channels':
+        await saveChannels()
+        break
+      case 'json':
+        await saveJsonConfig()
+        break
+      default:
+        toast.error('Unknown settings tab.')
+    }
   }
 
   const addChannel = () => {
@@ -142,11 +269,11 @@ export function SettingsPage() {
   }
 
   return (
-    <div className='flex h-full bg-zinc-950 text-zinc-100 overflow-hidden'>
+    <div className='flex h-full bg-background text-foreground overflow-hidden'>
       {/* Settings Sidebar */}
-      <div className='w-64 border-r border-zinc-800 bg-zinc-900/30 flex flex-col p-4 shrink-0'>
-        <h2 className='text-lg font-bold tracking-tight mb-6 px-2 text-zinc-200'>
-          Settings
+      <div className='w-64 border-r border-border bg-card/30 flex flex-col p-4 shrink-0'>
+        <h2 className='text-lg font-bold tracking-tight mb-6 px-2 text-foreground'>
+          {t('settings.title')}
         </h2>
 
         <nav className='flex flex-col gap-1.5'>
@@ -155,48 +282,48 @@ export function SettingsPage() {
             active={activeTab === 'appearance'}
             onClick={() => setActiveTab('appearance')}
             icon={<Palette className='w-4 h-4' />}
-            label='Appearance'
+            label={t('settings.appearance')}
           />
           <TabButton
             id='language'
             active={activeTab === 'language'}
             onClick={() => setActiveTab('language')}
             icon={<Globe className='w-4 h-4' />}
-            label='Language'
+            label={t('settings.language')}
           />
           <TabButton
             id='providers'
             active={activeTab === 'providers'}
             onClick={() => setActiveTab('providers')}
             icon={<Key className='w-4 h-4' />}
-            label='LLM Providers'
+            label={t('settings.llmProviders')}
           />
           <TabButton
             id='tokens'
             active={activeTab === 'tokens'}
             onClick={() => setActiveTab('tokens')}
             icon={<Link className='w-4 h-4' />}
-            label='Tokens & Local'
+            label={t('settings.tokensLocal')}
           />
           <TabButton
             id='channels'
             active={activeTab === 'channels'}
             onClick={() => setActiveTab('channels')}
             icon={<MessageSquare className='w-4 h-4' />}
-            label='Channels'
+            label={t('settings.channels')}
           />
           <TabButton
             id='json'
             active={activeTab === 'json'}
             onClick={() => setActiveTab('json')}
             icon={<FileJson className='w-4 h-4' />}
-            label='JSON Config'
+            label={t('settings.jsonConfig')}
           />
         </nav>
       </div>
 
       {/* Settings Content */}
-      <div className='flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800'>
+      <div className='flex-1 p-8 overflow-y-auto scrollbar-thin scrollbar-thumb-scrollbar-thumb'>
         <div className=''>
           <AnimatePresence mode='wait'>
             {/* Appearance Tab */}
@@ -207,12 +334,14 @@ export function SettingsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                <h3 className='text-xl font-semibold mb-6'>Appearance</h3>
+                <h3 className='text-xl font-semibold mb-6'>
+                  {t('settings.appearance')}
+                </h3>
 
                 <div className='space-y-6'>
                   <div>
-                    <label className='block text-sm font-medium text-zinc-400 mb-3'>
-                      Theme Preference
+                    <label className='block text-sm font-medium text-muted-foreground mb-3'>
+                      {t('settings.themePreference')}
                     </label>
                     <div className='grid grid-cols-3 gap-4'>
                       <ThemeOption
@@ -220,21 +349,21 @@ export function SettingsPage() {
                         current={theme}
                         onSelect={setTheme}
                         icon={<Monitor className='w-5 h-5' />}
-                        label='System'
+                        label={t('settings.themeSystem')}
                       />
                       <ThemeOption
                         id='dark'
                         current={theme}
                         onSelect={setTheme}
                         icon={<Moon className='w-5 h-5' />}
-                        label='Dark'
+                        label={t('settings.themeDark')}
                       />
                       <ThemeOption
                         id='light'
                         current={theme}
                         onSelect={setTheme}
                         icon={<Sun className='w-5 h-5' />}
-                        label='Light'
+                        label={t('settings.themeLight')}
                       />
                     </div>
                   </div>
@@ -250,7 +379,9 @@ export function SettingsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                <h3 className='text-xl font-semibold mb-6'>Language</h3>
+                <h3 className='text-xl font-semibold mb-6'>
+                  {t('settings.language')}
+                </h3>
 
                 <div className='space-y-4'>
                   <div
@@ -258,20 +389,20 @@ export function SettingsPage() {
                     className={clsx(
                       'p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-colors',
                       language === 'en'
-                        ? 'border-orange-500 bg-orange-500/5'
-                        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border bg-card hover:border-border-hover'
                     )}
                   >
                     <div>
-                      <h4 className='font-medium text-zinc-200'>
-                        English (US)
+                      <h4 className='font-medium text-foreground'>
+                        {t('settings.languageEn')}
                       </h4>
-                      <p className='text-sm text-zinc-500 mt-0.5'>
-                        System default language
+                      <p className='text-sm text-muted-foreground mt-0.5'>
+                        {t('settings.languageEnDesc')}
                       </p>
                     </div>
                     {language === 'en' && (
-                      <CheckCircle2 className='w-5 h-5 text-orange-500' />
+                      <CheckCircle2 className='w-5 h-5 text-primary' />
                     )}
                   </div>
 
@@ -280,18 +411,20 @@ export function SettingsPage() {
                     className={clsx(
                       'p-4 rounded-xl border flex items-center justify-between cursor-pointer transition-colors',
                       language === 'zh'
-                        ? 'border-orange-500 bg-orange-500/5'
-                        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700'
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border bg-card hover:border-border-hover'
                     )}
                   >
                     <div>
-                      <h4 className='font-medium text-zinc-200'>简体中文</h4>
-                      <p className='text-sm text-zinc-500 mt-0.5'>
-                        Chinese (Simplified)
+                      <h4 className='font-medium text-foreground'>
+                        {t('settings.languageZh')}
+                      </h4>
+                      <p className='text-sm text-muted-foreground mt-0.5'>
+                        {t('settings.languageZhDesc')}
                       </p>
                     </div>
                     {language === 'zh' && (
-                      <CheckCircle2 className='w-5 h-5 text-orange-500' />
+                      <CheckCircle2 className='w-5 h-5 text-primary' />
                     )}
                   </div>
                 </div>
@@ -306,26 +439,28 @@ export function SettingsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                <h3 className='text-xl font-semibold mb-6'>LLM Providers</h3>
+                <h3 className='text-xl font-semibold mb-6'>
+                  {t('settings.llmProviders')}
+                </h3>
 
                 <div className='space-y-6'>
                   {llm.map((item: any) => (
                     <div
                       key={item.provider}
-                      className='p-5 bg-zinc-900 border border-zinc-800 rounded-xl'
+                      className='p-5 bg-card border border-border rounded-xl'
                     >
                       <div className='flex items-center justify-between mb-4'>
                         <div>
-                          <h4 className='font-medium text-zinc-200'>
+                          <h4 className='font-medium text-foreground'>
                             {item.provider}
                           </h4>
                         </div>
-                        <div className='px-2 py-1 bg-zinc-800 rounded text-xs font-mono text-zinc-400'>
+                        <div className='px-2 py-1 bg-secondary rounded text-xs font-mono text-muted-foreground'>
                           {item.baseUrl}
                         </div>
                       </div>
                       <div>
-                        <label className='block text-xs font-medium text-zinc-500 mb-1.5'>
+                        <label className='block text-xs font-medium text-muted-foreground mb-1.5'>
                           API Key
                         </label>
                         <div className='relative'>
@@ -333,10 +468,18 @@ export function SettingsPage() {
                             type={
                               visibleKeys[item.provider] ? 'text' : 'password'
                             }
-                            value={item.apiKey}
-                            onChange={(e) => setZhipuKey(e.target.value)}
+                            value={item.apiKey || ''}
+                            onChange={(e) =>
+                              setLLM((prev: any[]) =>
+                                prev.map((p: any) =>
+                                  p.provider === item.provider
+                                    ? { ...p, apiKey: e.target.value }
+                                    : p
+                                )
+                              )
+                            }
                             placeholder={`Enter your ${item.provider} API Key...`}
-                            className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 pr-10 text-sm text-zinc-300 font-mono placeholder:text-zinc-700 focus:border-orange-500/50 focus:outline-none transition-colors'
+                            className='w-full bg-background border border-border rounded-lg px-3 py-2 pr-10 text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors'
                           />
                           <button
                             type='button'
@@ -346,7 +489,7 @@ export function SettingsPage() {
                                 [item.provider]: !prev[item.provider]
                               }))
                             }
-                            className='absolute right-2 top-1/2 -translate-y-1/2 p-1 text-zinc-500 hover:text-zinc-300 transition-colors'
+                            className='absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors'
                           >
                             {visibleKeys[item.provider] ? (
                               <EyeOff className='w-4 h-4' />
@@ -371,18 +514,18 @@ export function SettingsPage() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 <h3 className='text-xl font-semibold mb-6'>
-                  Tokens & Local Connections
+                  {t('settings.tokensLocal')}
                 </h3>
 
                 <div className='space-y-6'>
                   {/* Local Connections */}
                   <div className='space-y-4'>
-                    <h4 className='text-sm font-medium text-zinc-200 pb-2 border-b border-zinc-800'>
+                    <h4 className='text-sm font-medium text-foreground pb-2 border-b border-border'>
                       Local Environment
                     </h4>
 
                     <div>
-                      <label className='block text-xs font-medium text-zinc-500 mb-1.5'>
+                      <label className='block text-xs font-medium text-muted-foreground mb-1.5'>
                         Local Ollama / Llama.cpp Endpoint
                       </label>
                       <input
@@ -390,9 +533,9 @@ export function SettingsPage() {
                         value={localOllamaUrl}
                         onChange={(e) => setLocalOllamaUrl(e.target.value)}
                         placeholder='http://localhost:11434'
-                        className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 font-mono placeholder:text-zinc-700 focus:border-orange-500/50 focus:outline-none transition-colors'
+                        className='w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors'
                       />
-                      <p className='text-xs text-zinc-500 mt-1.5'>
+                      <p className='text-xs text-muted-foreground mt-1.5'>
                         Used for local inference. Ensure the server is running.
                       </p>
                     </div>
@@ -400,12 +543,12 @@ export function SettingsPage() {
 
                   {/* Access Tokens */}
                   <div className='space-y-4 pt-4'>
-                    <h4 className='text-sm font-medium text-zinc-200 pb-2 border-b border-zinc-800'>
+                    <h4 className='text-sm font-medium text-foreground pb-2 border-b border-border'>
                       Service Tokens
                     </h4>
 
                     <div>
-                      <label className='block text-xs font-medium text-zinc-500 mb-1.5 flex items-center gap-1.5'>
+                      <label className='block text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5'>
                         <Github className='w-3.5 h-3.5' /> GitHub Personal
                         Access Token (PAT)
                       </label>
@@ -414,16 +557,16 @@ export function SettingsPage() {
                         value={githubToken}
                         onChange={(e) => setGithubToken(e.target.value)}
                         placeholder='ghp_...'
-                        className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 font-mono placeholder:text-zinc-700 focus:border-orange-500/50 focus:outline-none transition-colors'
+                        className='w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors'
                       />
-                      <p className='text-xs text-zinc-500 mt-1.5'>
+                      <p className='text-xs text-muted-foreground mt-1.5'>
                         Required for Agents to read repositories or post PR
                         comments.
                       </p>
                     </div>
 
                     <div>
-                      <label className='block text-xs font-medium text-zinc-500 mb-1.5 flex items-center gap-1.5'>
+                      <label className='block text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5'>
                         <Globe className='w-3.5 h-3.5' /> Tavily Search API
                         Token
                       </label>
@@ -432,9 +575,9 @@ export function SettingsPage() {
                         value={tavilyToken}
                         onChange={(e) => setTavilyToken(e.target.value)}
                         placeholder='tvly-...'
-                        className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 font-mono placeholder:text-zinc-700 focus:border-orange-500/50 focus:outline-none transition-colors'
+                        className='w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors'
                       />
-                      <p className='text-xs text-zinc-500 mt-1.5'>
+                      <p className='text-xs text-muted-foreground mt-1.5'>
                         High-quality search engine optimized for LLMs.
                       </p>
                     </div>
@@ -455,13 +598,13 @@ export function SettingsPage() {
                   <h3 className='text-xl font-semibold'>Broadcast Channels</h3>
                   <button
                     onClick={addChannel}
-                    className='flex items-center gap-1.5 text-sm font-medium text-orange-400 hover:text-orange-300 transition-colors'
+                    className='flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors'
                   >
-                    <Plus className='w-4 h-4' /> Add Channel
+                    <Plus className='w-4 h-4' /> {t('common.create')}
                   </button>
                 </div>
 
-                <p className='text-sm text-zinc-400 mb-6'>
+                <p className='text-sm text-muted-foreground mb-6'>
                   Configure webhooks for Feishu, Slack, or Discord to allow your
                   workflows to send notifications automatically.
                 </p>
@@ -474,11 +617,11 @@ export function SettingsPage() {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className='bg-zinc-900 border border-zinc-800 rounded-xl p-4 overflow-hidden'
+                        className='bg-card border border-border rounded-xl p-4 overflow-hidden'
                       >
                         <div className='flex gap-4'>
                           <div className='w-32 shrink-0'>
-                            <label className='block text-xs font-medium text-zinc-500 mb-1.5'>
+                            <label className='block text-xs font-medium text-muted-foreground mb-1.5'>
                               Platform
                             </label>
                             <select
@@ -490,7 +633,7 @@ export function SettingsPage() {
                                   e.target.value
                                 )
                               }
-                              className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1.5 text-sm text-zinc-200 focus:border-orange-500/50 focus:outline-none transition-colors appearance-none'
+                              className='w-full bg-background border border-border rounded-lg px-2 py-1.5 text-sm text-foreground focus:border-primary/50 focus:outline-none transition-colors appearance-none'
                             >
                               <option>Feishu</option>
                               <option>Slack</option>
@@ -500,7 +643,7 @@ export function SettingsPage() {
                           </div>
 
                           <div className='flex-1'>
-                            <label className='block text-xs font-medium text-zinc-500 mb-1.5'>
+                            <label className='block text-xs font-medium text-muted-foreground mb-1.5'>
                               Channel Name
                             </label>
                             <input
@@ -514,14 +657,14 @@ export function SettingsPage() {
                                 )
                               }
                               placeholder='e.g., General Chat'
-                              className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-200 focus:border-orange-500/50 focus:outline-none transition-colors'
+                              className='w-full bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-primary/50 focus:outline-none transition-colors'
                             />
                           </div>
 
                           <div className='pt-6'>
                             <button
                               onClick={() => removeChannel(channel.id)}
-                              className='p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-800 rounded transition-colors'
+                              className='p-1.5 text-muted-foreground hover:text-destructive hover:bg-secondary rounded transition-colors'
                             >
                               <Trash2 className='w-4 h-4' />
                             </button>
@@ -529,7 +672,7 @@ export function SettingsPage() {
                         </div>
 
                         <div className='mt-3'>
-                          <label className='block text-xs font-medium text-zinc-500 mb-1.5'>
+                          <label className='block text-xs font-medium text-muted-foreground mb-1.5'>
                             Webhook URL
                           </label>
                           <input
@@ -543,14 +686,14 @@ export function SettingsPage() {
                               )
                             }
                             placeholder='https://...'
-                            className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm text-zinc-400 font-mono focus:border-orange-500/50 focus:outline-none transition-colors'
+                            className='w-full bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-muted-foreground font-mono focus:border-primary/50 focus:outline-none transition-colors'
                           />
                         </div>
                       </motion.div>
                     ))}
                   </AnimatePresence>
                   {channels.length === 0 && (
-                    <div className='text-center py-8 text-zinc-500 text-sm border border-dashed border-zinc-800 rounded-xl'>
+                    <div className='text-center py-8 text-muted-foreground text-sm border border-dashed border-border rounded-xl'>
                       No channels configured. Add one to enable bot
                       notifications.
                     </div>
@@ -575,35 +718,29 @@ export function SettingsPage() {
                   <div className='flex items-center gap-4'>
                     <button
                       onClick={formatJson}
-                      className='text-xs text-blue-400 hover:text-blue-300 font-medium'
+                      className='text-xs text-info hover:text-info/80 font-medium'
                     >
                       Format JSON
                     </button>
-                    <button
-                      onClick={resetJson}
-                      className='text-xs text-orange-400 hover:text-orange-300 font-medium'
-                    >
-                      Reset to Defaults
-                    </button>
                   </div>
                 </div>
-                <p className='text-sm text-zinc-400 mb-4'>
+                <p className='text-sm text-muted-foreground mb-4'>
                   Directly edit the underlying{' '}
-                  <code className='text-xs bg-zinc-800 px-1 rounded text-zinc-300'>
+                  <code className='text-xs bg-secondary px-1 rounded text-foreground'>
                     config.json
                   </code>{' '}
                   file. Use with caution.
                 </p>
                 <div
                   className={clsx(
-                    'flex-1 bg-zinc-950 border rounded-xl overflow-hidden min-h-[400px] transition-colors relative',
-                    jsonError ? 'border-red-500/50' : 'border-zinc-800'
+                    'flex-1 bg-background border rounded-xl overflow-hidden min-h-[400px] transition-colors relative',
+                    jsonError ? 'border-destructive/50' : 'border-border'
                   )}
                 >
                   <textarea
                     value={jsonConfig}
                     onChange={handleJsonChange}
-                    className='w-full h-full p-4 pb-12 bg-transparent text-zinc-300 font-mono text-sm resize-none focus:outline-none focus:ring-0 scrollbar-thin scrollbar-thumb-zinc-700'
+                    className='w-full h-full p-4 pb-12 bg-transparent min-h-[400px] text-foreground font-mono text-sm resize-none focus:outline-none focus:ring-0 scrollbar-thin scrollbar-thumb-scrollbar-thumb'
                     spellCheck={false}
                   />
                   <AnimatePresence>
@@ -612,10 +749,10 @@ export function SettingsPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 10 }}
-                        className='absolute bottom-0 left-0 right-0 bg-red-950/50 backdrop-blur-sm border-t border-red-900/50 p-3'
+                        className='absolute bottom-0 left-0 right-0 bg-destructive/10 backdrop-blur-sm border-t border-destructive/30 p-3'
                       >
-                        <p className='text-xs text-red-400 font-mono flex items-center gap-2'>
-                          <span className='w-1.5 h-1.5 rounded-full bg-red-500 shrink-0' />
+                        <p className='text-xs text-destructive font-mono flex items-center gap-2'>
+                          <span className='w-1.5 h-1.5 rounded-full bg-destructive shrink-0' />
                           Invalid JSON: {jsonError}
                         </p>
                       </motion.div>
@@ -626,13 +763,13 @@ export function SettingsPage() {
             )}
           </AnimatePresence>
 
-          <div className='mt-8 pt-6 border-t border-zinc-800 flex justify-end'>
+          <div className='mt-8 pt-6 border-t border-border flex justify-end'>
             <button
               onClick={handleSave}
-              className='flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20'
+              className='flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-primary-foreground rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary/20'
             >
               <Save className='w-4 h-4' />
-              Save Settings
+              {t('settings.saveSettings')}
             </button>
           </div>
         </div>
@@ -660,14 +797,14 @@ function TabButton({
       className={clsx(
         'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative overflow-hidden',
         active
-          ? 'bg-zinc-800/80 text-zinc-100 shadow-sm'
-          : 'text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200'
+          ? 'bg-secondary/80 text-foreground shadow-sm'
+          : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
       )}
     >
       {active && (
         <motion.div
           layoutId='settingsTabIndicator'
-          className='absolute left-0 top-2 bottom-2 w-1 bg-orange-500 rounded-r-md'
+          className='absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-md'
         />
       )}
       {icon}
@@ -683,9 +820,9 @@ function ThemeOption({
   icon,
   label
 }: {
-  id: string
-  current: string
-  onSelect: (id: string) => void
+  id: ThemeMode
+  current: ThemeMode
+  onSelect: (id: ThemeMode) => void
   icon: React.ReactNode
   label: string
 }) {
@@ -696,8 +833,8 @@ function ThemeOption({
       className={clsx(
         'flex flex-col items-center justify-center gap-3 p-4 rounded-xl border transition-all',
         isActive
-          ? 'border-orange-500 bg-orange-500/5 text-orange-500'
-          : 'border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200'
+          ? 'border-primary bg-primary/5 text-primary'
+          : 'border-border bg-card text-muted-foreground hover:border-border-hover hover:text-foreground'
       )}
     >
       {icon}

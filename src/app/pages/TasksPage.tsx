@@ -4,6 +4,7 @@ import { Modal } from "../components/Modal";
 import { toast } from "sonner";
 import { motion } from "motion/react";
 import clsx from "clsx";
+import { useLanguage } from "../context";
 
 const INITIAL_CRON_JOBS = [
   { id: 1, name: "Daily ArXiv Summarizer", schedule: "0 8 * * *", status: "Active", nextRun: "Tomorrow, 08:00 AM", agent: "Research Assistant" },
@@ -20,6 +21,7 @@ export function TasksPage() {
   const [activeTab, setActiveTab] = useState<"cron" | "orchestration">("cron");
   const [jobs, setJobs] = useState(INITIAL_CRON_JOBS);
   const [isCronModalOpen, setIsCronModalOpen] = useState(false);
+  const { t } = useLanguage();
 
   // Form State
   const [taskName, setTaskName] = useState("");
@@ -28,127 +30,127 @@ export function TasksPage() {
 
   const handleCreateCron = () => {
     if (!taskName) {
-      toast.error("Task name is required.");
+      toast.error(t('tasks.nameRequired'));
       return;
     }
     const newJob = {
       id: Date.now(),
       name: taskName,
       schedule: cronExpr,
-      status: "Active",
-      nextRun: "Calculating...",
-      agent: selectedAgent || "Default Agent"
+      status: t('tasks.active'),
+      nextRun: t('tasks.calculating'),
+      agent: selectedAgent || t('tasks.defaultAgent')
     };
     setJobs([...jobs, newJob]);
     setIsCronModalOpen(false);
-    toast.success(`Scheduled task "${taskName}" created.`);
+    toast.success(`${t('tasks.taskCreated')} "${taskName}"`);
     setTaskName("");
     setCronExpr("0 9 * * *");
     setSelectedAgent("");
   };
 
   const handleTestRun = (name: string) => {
-    toast(`Triggered test run for: ${name}`);
+    toast(`${t('tasks.testRunTriggered')}: ${name}`);
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-zinc-950 text-zinc-100">
+    <div className="h-full flex flex-col overflow-hidden bg-background text-foreground">
       {/* Page Header */}
       <div className="shrink-0 p-6 pb-0">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Automation & Tasks</h1>
-            <p className="text-zinc-400 mt-1">Manage scheduled cron jobs and multi-agent orchestrations.</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t('tasks.title')}</h1>
+            <p className="text-muted-foreground mt-1">{t('tasks.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsCronModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20"
+            className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20"
           >
             <Plus className="w-4 h-4" />
-            New Task
+            {t('tasks.newTask')}
           </button>
         </div>
 
         {/* Custom Tabs */}
-        <div className="flex items-center gap-6 border-b border-zinc-800">
-          <button 
+        <div className="flex items-center gap-6 border-b border-border">
+          <button
             onClick={() => setActiveTab("cron")}
             className={clsx(
               "pb-3 text-sm font-medium transition-colors relative flex items-center gap-2",
-              activeTab === "cron" ? "text-orange-400" : "text-zinc-400 hover:text-zinc-200"
+              activeTab === "cron" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Clock className="w-4 h-4" />
-            Scheduled Tasks
+            {t('tasks.scheduledTasks')}
             {activeTab === "cron" && (
-              <motion.div layoutId="taskTabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-orange-500 rounded-t-md" />
+              <motion.div layoutId="taskTabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-primary-hover rounded-t-md" />
             )}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab("orchestration")}
             className={clsx(
               "pb-3 text-sm font-medium transition-colors relative flex items-center gap-2",
-              activeTab === "orchestration" ? "text-orange-400" : "text-zinc-400 hover:text-zinc-200"
+              activeTab === "orchestration" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Workflow className="w-4 h-4" />
-            Orchestration
+            {t('tasks.orchestration')}
             {activeTab === "orchestration" && (
-              <motion.div layoutId="taskTabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-orange-500 rounded-t-md" />
+              <motion.div layoutId="taskTabIndicator" className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-primary-hover rounded-t-md" />
             )}
           </button>
         </div>
       </div>
 
       {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-zinc-800">
+      <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-scrollbar-thumb">
         {activeTab === "cron" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 max-w-5xl">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-sm">
+            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="bg-zinc-900/50 text-zinc-500 border-b border-zinc-800">
-                    <th className="font-medium p-4 py-3">Task Name</th>
-                    <th className="font-medium p-4 py-3">Schedule (Cron)</th>
-                    <th className="font-medium p-4 py-3">Assigned Agent</th>
-                    <th className="font-medium p-4 py-3">Next Run</th>
-                    <th className="font-medium p-4 py-3">Status</th>
-                    <th className="font-medium p-4 py-3 text-right">Actions</th>
+                  <tr className="bg-card/50 text-muted-foreground border-b border-border">
+                    <th className="font-medium p-4 py-3">{t('tasks.taskName')}</th>
+                    <th className="font-medium p-4 py-3">{t('tasks.schedule')}</th>
+                    <th className="font-medium p-4 py-3">{t('tasks.assignedAgent')}</th>
+                    <th className="font-medium p-4 py-3">{t('tasks.nextRun')}</th>
+                    <th className="font-medium p-4 py-3">{t('tasks.status')}</th>
+                    <th className="font-medium p-4 py-3 text-right">{t('tasks.actions')}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-800/60">
+                <tbody className="divide-y divide-border/60">
                   {jobs.map(job => (
-                    <tr key={job.id} className="hover:bg-zinc-800/30 transition-colors group">
-                      <td className="p-4 py-3 font-medium text-zinc-100 flex items-center gap-3">
-                        <Calendar className="w-4 h-4 text-zinc-500" />
+                    <tr key={job.id} className="hover:bg-secondary/30 transition-colors group">
+                      <td className="p-4 py-3 font-medium text-foreground flex items-center gap-3">
+                        <Calendar className="w-4 h-4 text-muted-foreground/50" />
                         {job.name}
                       </td>
                       <td className="p-4 py-3">
-                        <span className="font-mono text-xs bg-zinc-950 px-2 py-1 rounded text-orange-300 border border-zinc-800">
+                        <span className="font-mono text-xs bg-background px-2 py-1 rounded text-primary border border-border">
                           {job.schedule}
                         </span>
                       </td>
-                      <td className="p-4 py-3 text-zinc-400 flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center shrink-0">
+                      <td className="p-4 py-3 text-muted-foreground flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-md bg-secondary border border-border-hover flex items-center justify-center shrink-0">
                           <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                         </div>
                         {job.agent}
                       </td>
-                      <td className="p-4 py-3 text-zinc-400 text-xs">{job.nextRun}</td>
+                      <td className="p-4 py-3 text-muted-foreground text-xs">{job.nextRun}</td>
                       <td className="p-4 py-3">
                         <div className="flex items-center gap-1.5">
-                          <div className={clsx("w-2 h-2 rounded-full", job.status === "Active" ? "bg-green-500" : "bg-zinc-500")} />
-                          <span className={clsx("text-xs font-medium", job.status === "Active" ? "text-green-400" : "text-zinc-500")}>
+                          <div className={clsx("w-2 h-2 rounded-full", job.status === "Active" ? "bg-green-500" : "bg-muted-foreground/50")} />
+                          <span className={clsx("text-xs font-medium", job.status === "Active" ? "text-green-400" : "text-muted-foreground/50")}>
                             {job.status}
                           </span>
                         </div>
                       </td>
                       <td className="p-4 py-3">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => handleTestRun(job.name)} className="p-1.5 text-zinc-400 hover:text-orange-400 hover:bg-zinc-800 rounded transition-colors" title="Test Run">
+                          <button onClick={() => handleTestRun(job.name)} className="p-1.5 text-muted-foreground hover:text-primary hover:bg-secondary rounded transition-colors" title="Test Run">
                             <PlayCircle className="w-4 h-4" />
                           </button>
-                          <button className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded transition-colors" title="Settings">
+                          <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors" title="Settings">
                             <Settings className="w-4 h-4" />
                           </button>
                         </div>
@@ -157,8 +159,8 @@ export function TasksPage() {
                   ))}
                   {jobs.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="p-8 text-center text-zinc-500">
-                        No scheduled tasks configured.
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground/50">
+                        {t('tasks.noTasks')}
                       </td>
                     </tr>
                   )}
@@ -172,25 +174,25 @@ export function TasksPage() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8 max-w-5xl">
             {/* Template Gallery */}
             <div>
-              <h2 className="text-lg font-medium tracking-tight mb-4 flex items-center gap-2 text-zinc-200">
-                <Network className="w-5 h-5 text-orange-500" />
-                Common Orchestration Workflows
+              <h2 className="text-lg font-medium tracking-tight mb-4 flex items-center gap-2 text-foreground">
+                <Network className="w-5 h-5 text-primary-hover" />
+                {t('tasks.commonWorkflows')}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {WORKFLOW_TEMPLATES.map(tmpl => (
-                  <div key={tmpl.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-700 transition-colors group cursor-pointer relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div key={tmpl.id} className="bg-card border border-border rounded-xl p-5 hover:border-border-hover transition-colors group cursor-pointer relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary-hover/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     <div className="flex items-start justify-between relative z-10">
-                      <div className="w-10 h-10 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center shadow-inner group-hover:border-zinc-700 transition-colors">
-                        <tmpl.icon className="w-5 h-5 text-orange-400" />
+                      <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center shadow-inner group-hover:border-border-hover transition-colors">
+                        <tmpl.icon className="w-5 h-5 text-primary" />
                       </div>
-                      <button className="text-zinc-400 hover:text-white flex items-center gap-1 text-xs font-medium px-2 py-1 bg-zinc-800/50 rounded-md">
+                      <button className="text-muted-foreground hover:text-white flex items-center gap-1 text-xs font-medium px-2 py-1 bg-secondary/50 rounded-md">
                         Use Template <ChevronRight className="w-3 h-3" />
                       </button>
                     </div>
                     <div className="mt-4 relative z-10">
-                      <h3 className="text-zinc-100 font-medium mb-1">{tmpl.name}</h3>
-                      <p className="text-zinc-400 text-sm leading-relaxed">{tmpl.desc}</p>
+                      <h3 className="text-foreground font-medium mb-1">{tmpl.name}</h3>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{tmpl.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -198,75 +200,75 @@ export function TasksPage() {
             </div>
 
             {/* Custom Workflow Builder Placeholder */}
-            <div className="border border-dashed border-zinc-800 rounded-xl bg-zinc-900/30 p-8 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-4 shadow-inner">
-                <Workflow className="w-8 h-8 text-zinc-500" />
+            <div className="border border-dashed border-border rounded-xl bg-card/30 p-8 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 rounded-full bg-card border border-border flex items-center justify-center mb-4 shadow-inner">
+                <Workflow className="w-8 h-8 text-muted-foreground/50" />
               </div>
-              <h3 className="text-zinc-200 font-medium text-lg mb-1">Visual Task Builder</h3>
-              <p className="text-zinc-400 text-sm max-w-md mb-6 leading-relaxed">
-                Connect multiple agents and skills using a drag-and-drop node interface. Create complex decision trees and pipelines.
+              <h3 className="text-foreground font-medium text-lg mb-1">{t('tasks.visualBuilder')}</h3>
+              <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
+                {t('tasks.visualBuilderDesc')}
               </p>
-              <button onClick={() => toast("Opening Visual Builder...")} className="px-5 py-2.5 bg-zinc-100 hover:bg-white text-zinc-900 rounded-lg text-sm font-semibold transition-colors shadow-sm">
-                Launch Node Editor
+              <button onClick={() => toast(t('tasks.openingBuilder'))} className="px-5 py-2.5 bg-foreground hover:bg-white text-background rounded-lg text-sm font-semibold transition-colors shadow-sm">
+                {t('tasks.launchEditor')}
               </button>
             </div>
           </motion.div>
         )}
       </div>
 
-      <Modal isOpen={isCronModalOpen} onClose={() => setIsCronModalOpen(false)} title="Create Scheduled Task" width="md">
+      <Modal isOpen={isCronModalOpen} onClose={() => setIsCronModalOpen(false)} title={t('tasks.createScheduledTask')} width="md">
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1.5">Task Name</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('tasks.taskName')}</label>
             <input
               type="text"
               value={taskName}
               onChange={(e) => setTaskName(e.target.value)}
-              placeholder="e.g., Morning Briefing"
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-orange-500/50 focus:outline-none transition-colors"
+              placeholder={t('tasks.taskNamePlaceholder')}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary-hover/50 focus:outline-none transition-colors"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1.5 flex justify-between">
-              <span>Cron Expression</span>
-              <span className="text-xs text-zinc-500 font-mono">Minute Hour Day Month Week</span>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5 flex justify-between">
+              <span>{t('tasks.cronExpression')}</span>
+              <span className="text-xs text-muted-foreground/50 font-mono">{t('tasks.cronFormat')}</span>
             </label>
             <input
               type="text"
               value={cronExpr}
               onChange={(e) => setCronExpr(e.target.value)}
               placeholder="0 9 * * *"
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 font-mono focus:border-orange-500/50 focus:outline-none transition-colors"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground font-mono focus:border-primary-hover/50 focus:outline-none transition-colors"
             />
-            <p className="text-xs text-zinc-500 mt-1.5 flex items-center gap-1.5">
-              <Clock className="w-3 h-3" /> Runs every day at 09:00 AM.
+            <p className="text-xs text-muted-foreground/50 mt-1.5 flex items-center gap-1.5">
+              <Clock className="w-3 h-3" /> {t('tasks.cronExample')}
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-zinc-400 mb-1.5">Assigned Agent</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-1.5">{t('tasks.assignedAgent')}</label>
             <select
               value={selectedAgent}
               onChange={(e) => setSelectedAgent(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:border-orange-500/50 focus:outline-none transition-colors appearance-none"
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:border-primary-hover/50 focus:outline-none transition-colors appearance-none"
             >
-              <option value="" disabled>Select an agent to execute</option>
+              <option value="" disabled>{t('tasks.selectAgent')}</option>
               <option value="Software Engineer">Software Engineer</option>
               <option value="Copywriter">Copywriter</option>
               <option value="Data Analyst">Data Analyst</option>
             </select>
           </div>
-          <div className="pt-4 flex justify-end gap-3 border-t border-zinc-800/80">
+          <div className="pt-4 flex justify-end gap-3 border-t border-border/80">
             <button
               onClick={() => setIsCronModalOpen(false)}
-              className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleCreateCron}
-              className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-sm font-medium transition-colors shadow-md"
+              className="px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors shadow-md"
             >
-              Save Schedule
+              {t('tasks.saveSchedule')}
             </button>
           </div>
         </div>

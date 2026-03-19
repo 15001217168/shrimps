@@ -9,6 +9,8 @@ import { getClawManager } from '../environment/claw-manager'
 import { getConfigService } from './config-service'
 import { getLauncherService } from './launcher-service'
 import { getOpenClawWSService } from './openclaw-ws-service'
+import { getSqliteService } from './sqlite-service'
+import { getStorageService } from './storage-service'
 import { loggerInfo, loggerSuccess } from '../utils/logger'
 
 const LOG_SOURCE = 'service_init'
@@ -19,6 +21,8 @@ const LOG_SOURCE = 'service_init'
 export { ConfigService, getConfigService } from './config-service'
 export { LauncherService, getLauncherService } from './launcher-service'
 export { OpenClawWSService, getOpenClawWSService } from './openclaw-ws-service'
+export { SqliteService, getSqliteService } from './sqlite-service'
+export { StorageService, getStorageService } from './storage-service'
 
 /**
  * IPC 注册函数
@@ -39,6 +43,8 @@ export function initializeServices(): void {
   const launcherService = getLauncherService()
   const configService = getConfigService()
   const openClawWSService = getOpenClawWSService()
+  const sqliteService = getSqliteService()
+  const storageService = getStorageService()
 
   // 设置环境服务依赖（相互依赖）
   nodeEnvService.setSandboxEnvService(sandboxEnvService)
@@ -56,6 +62,12 @@ export function initializeServices(): void {
 
   // 设置 OpenClawWSService 依赖
   openClawWSService.setConfigService(configService)
+
+  // 初始化 SQLite 数据库
+  sqliteService.initialize()
+
+  // 初始化存储服务
+  storageService.initialize()
 
   loggerSuccess('服务依赖初始化完成', LOG_SOURCE)
 }

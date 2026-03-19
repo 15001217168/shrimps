@@ -17,14 +17,12 @@ import {
   Image as ImageIcon,
   Code2,
   PenTool,
-  Cpu,
-  Cloud,
   Check
 } from 'lucide-react'
 import clsx from 'clsx'
 import { motion, AnimatePresence } from 'motion/react'
 
-import { useConnectionState, useConfigData } from '../context'
+import { useConnectionState, useConfigData, useLanguage } from '../context'
 import { ModelInfo } from '../context/types'
 
 // ==================== 类型定义 ====================
@@ -146,6 +144,7 @@ const MENTIONS = [
 export function ChatPage() {
   const connectionState = useConnectionState()
   const configState = useConfigData()
+  const { t } = useLanguage()
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES)
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -161,17 +160,30 @@ export function ChatPage() {
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const isFirstLoad = useRef(true)
 
   // 连接状态配置
   const connectionConfig = {
-    disconnected: { color: 'bg-zinc-500', text: '未连接', canSend: false },
-    connecting: {
-      color: 'bg-yellow-500 animate-pulse',
-      text: '连接中...',
+    disconnected: {
+      color: 'bg-zinc-500',
+      text: t('chat.disconnected'),
       canSend: false
     },
-    connected: { color: 'bg-green-500', text: '已连接', canSend: true },
-    error: { color: 'bg-red-500', text: '连接错误', canSend: false }
+    connecting: {
+      color: 'bg-yellow-500 animate-pulse',
+      text: t('chat.connecting'),
+      canSend: false
+    },
+    connected: {
+      color: 'bg-green-500',
+      text: t('chat.connected'),
+      canSend: true
+    },
+    error: {
+      color: 'bg-red-500',
+      text: t('chat.connectionError'),
+      canSend: false
+    }
   }
 
   const connStatus = connectionConfig[connectionState]
@@ -404,17 +416,17 @@ export function ChatPage() {
   )
 
   return (
-    <div className='flex flex-col h-full bg-zinc-950 text-zinc-100 relative'>
+    <div className='flex flex-col h-full bg-background text-foreground relative'>
       {/* Chat Area Top Bar (Model Selector Overlay) */}
       <div className='absolute top-0 left-0 right-0 h-14 flex items-center justify-center pointer-events-none z-30'>
         <div className='relative pointer-events-auto'>
           <button
             onClick={() => setShowModelDropdown(!showModelDropdown)}
-            className='flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/90 border border-zinc-800 backdrop-blur-md text-sm font-medium text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all shadow-md'
+            className='flex items-center gap-2 px-3 py-1.5 rounded-full bg-card/90 border border-border backdrop-blur-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shadow-md'
           >
             <Sparkles className='w-3.5 h-3.5 text-orange-500' />
             {selectedModel}
-            <ChevronDown className='w-4 h-4 text-zinc-500' />
+            <ChevronDown className='w-4 h-4 text-muted-foreground' />
           </button>
 
           {/* Model Dropdown */}
@@ -433,7 +445,7 @@ export function ChatPage() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 10, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className='absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-xl shadow-2xl overflow-hidden z-50 origin-top'
+                  className='absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 bg-card/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden z-50 origin-top'
                 >
                   <div className='p-2 space-y-3'>
                     {/* Local Models */}
@@ -446,10 +458,10 @@ export function ChatPage() {
                               setSelectedModel(model.id)
                               setShowModelDropdown(false)
                             }}
-                            className='w-full flex items-center justify-between px-2 py-1.5 hover:bg-zinc-800 rounded-lg text-left transition-colors group'
+                            className='w-full flex items-center justify-between px-2 py-1.5 hover:bg-secondary rounded-lg text-left transition-colors group'
                           >
                             <div>
-                              <div className='text-sm font-medium text-zinc-200 group-hover:text-white'>
+                              <div className='text-sm font-medium text-foreground group-hover:text-foreground'>
                                 {model.id}
                               </div>
                             </div>
@@ -471,12 +483,12 @@ export function ChatPage() {
       {/* Messages Scroll Area */}
       <div
         ref={scrollRef}
-        className='flex-1 overflow-y-auto px-4 py-6 scroll-smooth pb-40 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent'
+        className='flex-1 overflow-y-auto px-4 py-6 scroll-auto pb-40 scrollbar-thin scrollbar-thumb-scrollbar-thumb scrollbar-track-transparent'
       >
         <div className='max-w-3xl mx-auto flex flex-col gap-6 pt-10'>
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage key={msg.id} message={msg} t={t} />
             ))}
             {isTyping && (
               <motion.div
@@ -489,9 +501,9 @@ export function ChatPage() {
                 </div>
                 <div className='flex-1 space-y-2 py-1'>
                   <div className='flex gap-1'>
-                    <span className='w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.3s]'></span>
-                    <span className='w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce [animation-delay:-0.15s]'></span>
-                    <span className='w-1.5 h-1.5 bg-zinc-500 rounded-full animate-bounce'></span>
+                    <span className='w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.3s]'></span>
+                    <span className='w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:-0.15s]'></span>
+                    <span className='w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce'></span>
                   </div>
                 </div>
               </motion.div>
@@ -501,7 +513,7 @@ export function ChatPage() {
       </div>
 
       {/* Input Area */}
-      <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950 to-transparent pt-20 pb-6 px-4 z-20'>
+      <div className='absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background to-transparent pt-20 pb-6 px-4 z-20'>
         <div className='max-w-3xl mx-auto relative'>
           {/* Mentions Popover */}
           <AnimatePresence>
@@ -511,31 +523,31 @@ export function ChatPage() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.98 }}
                 transition={{ duration: 0.15 }}
-                className='absolute bottom-full mb-3 left-0 w-72 bg-zinc-900/95 backdrop-blur-xl border border-zinc-700/80 rounded-xl shadow-2xl overflow-hidden z-50 origin-bottom-left'
+                className='absolute bottom-full mb-3 left-0 w-72 bg-card/95 backdrop-blur-xl border border-border rounded-xl shadow-2xl overflow-hidden z-50 origin-bottom-left'
               >
-                <div className='px-3 py-2 border-b border-zinc-800/80 flex items-center justify-between'>
-                  <span className='text-[10px] font-semibold text-zinc-500 uppercase tracking-wider'>
-                    Agents & Skills
+                <div className='px-3 py-2 border-b border-border/80 flex items-center justify-between'>
+                  <span className='text-[10px] font-semibold text-muted-foreground uppercase tracking-wider'>
+                    {t('layout.agentsAndSkills')}
                   </span>
-                  <span className='text-[10px] text-zinc-600'>
-                    Press Esc to close
+                  <span className='text-[10px] text-muted-foreground'>
+                    {t('layout.pressEscToClose')}
                   </span>
                 </div>
-                <div className='max-h-56 overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-zinc-700'>
+                <div className='max-h-56 overflow-y-auto p-1.5 scrollbar-thin scrollbar-thumb-scrollbar-thumb'>
                   {filteredMentions.map((m) => (
                     <button
                       key={m.id}
                       onClick={() => insertMention(m.id)}
-                      className='w-full flex items-center gap-3 px-2 py-2 hover:bg-zinc-800/80 rounded-lg text-left transition-colors group'
+                      className='w-full flex items-center gap-3 px-2 py-2 hover:bg-secondary/80 rounded-lg text-left transition-colors group'
                     >
-                      <div className='w-7 h-7 rounded-md bg-zinc-950 border border-zinc-800 flex items-center justify-center shrink-0 group-hover:border-zinc-700 transition-colors shadow-inner'>
+                      <div className='w-7 h-7 rounded-md bg-background border border-border flex items-center justify-center shrink-0 group-hover:border-border-hover transition-colors shadow-inner'>
                         {m.icon}
                       </div>
                       <div className='flex flex-col'>
-                        <span className='text-sm font-medium text-zinc-200 group-hover:text-white'>
+                        <span className='text-sm font-medium text-foreground group-hover:text-foreground'>
                           {m.name}
                         </span>
-                        <span className='text-[10px] text-zinc-500 uppercase tracking-wide'>
+                        <span className='text-[10px] text-muted-foreground uppercase tracking-wide'>
                           {m.type}
                         </span>
                       </div>
@@ -549,14 +561,14 @@ export function ChatPage() {
           {/* Form */}
           <form
             onSubmit={handleSendMessage}
-            className='flex items-end gap-2 bg-zinc-900 border border-zinc-800 p-2 rounded-2xl shadow-xl shadow-black/40 focus-within:border-zinc-700 transition-colors relative z-40'
+            className='flex items-end gap-2 bg-card border border-border p-2 rounded-2xl shadow-xl shadow-black/40 focus-within:border-border-hover transition-colors relative z-40'
           >
             {/* Left Actions */}
             <div className='flex gap-1 pb-1 px-1'>
               <button
                 type='button'
-                className='p-2 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-xl transition-colors'
-                title='Attach File'
+                className='p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl transition-colors'
+                title={t('layout.attachFile')}
               >
                 <Paperclip className='w-5 h-5' />
               </button>
@@ -576,8 +588,8 @@ export function ChatPage() {
                   setShowMentions(false)
                 }
               }}
-              placeholder='Ask anything, or type @ to mention an agent or skill...'
-              className='flex-1 bg-transparent border-0 resize-none py-3 px-2 max-h-32 min-h-[44px] text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:outline-none scrollbar-thin'
+              placeholder={t('chat.placeholder')}
+              className='flex-1 bg-transparent border-0 resize-none py-3 px-2 max-h-32 min-h-[44px] text-foreground placeholder:text-muted-foreground focus:ring-0 focus:outline-none scrollbar-thin'
               rows={1}
               style={{ height: 'auto' }}
             />
@@ -586,24 +598,23 @@ export function ChatPage() {
             <div className='flex gap-1 pb-1 pr-1'>
               <button
                 type='button'
-                className='p-2 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-xl transition-colors hidden sm:block'
-                title='Voice Input'
+                className='p-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-xl transition-colors hidden sm:block'
+                title={t('layout.voiceInput')}
               >
                 <Mic className='w-5 h-5' />
               </button>
               <button
                 type='submit'
                 disabled={!inputMessage.trim() || !connStatus.canSend}
-                className='p-2 bg-zinc-100 text-zinc-900 disabled:bg-zinc-800 disabled:text-zinc-600 rounded-xl transition-all shadow-sm'
+                className='p-2 bg-primary-foreground text-primary disabled:bg-secondary disabled:text-muted-foreground rounded-xl transition-all shadow-sm'
               >
                 <Send className='w-5 h-5' />
               </button>
             </div>
           </form>
           <div className='text-center mt-2'>
-            <span className='text-[10px] text-zinc-500 font-medium tracking-wide'>
-              OpenClaw can make mistakes. Consider verifying important
-              information.
+            <span className='text-[10px] text-muted-foreground font-medium tracking-wide'>
+              {t('chat.disclaimer')}
             </span>
           </div>
         </div>
@@ -630,7 +641,13 @@ function highlightMentions(text: string) {
   })
 }
 
-function ChatMessage({ message }: { message: Message }) {
+function ChatMessage({
+  message,
+  t
+}: {
+  message: Message
+  t: (key: string) => string
+}) {
   const isUser = message.role === 'user'
 
   return (
@@ -639,7 +656,7 @@ function ChatMessage({ message }: { message: Message }) {
       animate={{ opacity: 1, y: 0 }}
       className={clsx(
         'flex gap-4 p-4 rounded-2xl group transition-colors',
-        isUser ? 'bg-zinc-900/50' : 'bg-transparent hover:bg-zinc-900/20'
+        isUser ? 'bg-secondary/50' : 'bg-transparent hover:bg-secondary/20'
       )}
     >
       {/* Avatar */}
@@ -647,7 +664,7 @@ function ChatMessage({ message }: { message: Message }) {
         className={clsx(
           'w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 shadow-sm',
           isUser
-            ? 'bg-zinc-800 text-zinc-300'
+            ? 'bg-secondary text-muted-foreground'
             : 'bg-gradient-to-br from-orange-500 to-amber-600 text-white shadow-orange-900/20 shadow-lg'
         )}
       >
@@ -657,13 +674,15 @@ function ChatMessage({ message }: { message: Message }) {
       {/* Content Area */}
       <div className='flex-1 space-y-2 overflow-hidden'>
         <div className='flex items-center gap-2'>
-          <span className='font-semibold text-sm text-zinc-200'>
-            {isUser ? 'You' : 'OpenClaw'}
+          <span className='font-semibold text-sm text-foreground'>
+            {isUser ? t('chat.you') : t('chat.assistant')}
           </span>
-          <span className='text-xs text-zinc-600'>{message.timestamp}</span>
+          <span className='text-xs text-muted-foreground'>
+            {message.timestamp}
+          </span>
         </div>
 
-        <div className='text-zinc-300 text-[15px] leading-relaxed whitespace-pre-wrap font-sans'>
+        <div className='text-foreground text-[15px] leading-relaxed whitespace-pre-wrap font-sans'>
           {highlightMentions(message.content)}
         </div>
 
@@ -672,25 +691,25 @@ function ChatMessage({ message }: { message: Message }) {
           <div className='flex items-center gap-1.5 pt-2 opacity-0 group-hover:opacity-100 transition-opacity'>
             <ActionIcon
               icon={<Copy className='w-3.5 h-3.5' />}
-              tooltip='Copy'
+              tooltip={t('layout.copy')}
             />
             <ActionIcon
               icon={<RefreshCw className='w-3.5 h-3.5' />}
-              tooltip='Regenerate'
+              tooltip={t('layout.regenerate')}
             />
-            <div className='w-px h-4 bg-zinc-800 mx-1'></div>
+            <div className='w-px h-4 bg-border mx-1'></div>
             <ActionIcon
               icon={<ThumbsUp className='w-3.5 h-3.5' />}
-              tooltip='Good response'
+              tooltip={t('layout.goodResponse')}
             />
             <ActionIcon
               icon={<ThumbsDown className='w-3.5 h-3.5' />}
-              tooltip='Bad response'
+              tooltip={t('layout.badResponse')}
             />
             <div className='flex-1'></div>
             <ActionIcon
               icon={<MoreVertical className='w-3.5 h-3.5' />}
-              tooltip='More'
+              tooltip={t('layout.more')}
             />
           </div>
         )}
@@ -707,9 +726,9 @@ function ActionIcon({
   tooltip: string
 }) {
   return (
-    <button className='p-1.5 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 rounded-md transition-colors relative group/btn'>
+    <button className='p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-md transition-colors relative group/btn'>
       {icon}
-      <span className='absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-zinc-300 text-[10px] font-medium px-2 py-1 rounded-md opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10'>
+      <span className='absolute -top-8 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground text-[10px] font-medium px-2 py-1 rounded-md opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10'>
         {tooltip}
       </span>
     </button>

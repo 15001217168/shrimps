@@ -12,42 +12,29 @@ const LOG_SOURCE = 'ipc_config'
 export function registerConfigIPC(): void {
   const configService = getConfigService()
 
-  // 获取配置
-  ipcMain.handle('config:get', async () => {
+  // 保存json配置
+  ipcMain.handle('config:save-json', async (_event, json: string) => {
     try {
-      const config = configService.getConfig()
-      return {
-        success: true,
-        data: {
-          ...config,
-          claw: {
-            ...config.claw,
-            apiKey: config.claw.apiKey ? '••••••••••••' : '',
-            hasApiKey: Boolean(config.claw.apiKey)
-          }
-        }
-      }
+      const result = await configService.saveJsonConfig(json)
+      return { success: result }
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : String(error)
-      loggerError(`获取配置失败: ${errMsg}`, LOG_SOURCE)
+      loggerError(`保存配置失败: ${errMsg}`, LOG_SOURCE)
       return { success: false, error: errMsg }
     }
   })
 
-  // 保存配置
-  ipcMain.handle(
-    'config:save',
-    async (_event, newConfig: Partial<AppConfig>) => {
-      try {
-        const result = await configService.updateConfig(newConfig)
-        return { success: result }
-      } catch (error: unknown) {
-        const errMsg = error instanceof Error ? error.message : String(error)
-        loggerError(`保存配置失败: ${errMsg}`, LOG_SOURCE)
-        return { success: false, error: errMsg }
-      }
+  // 获取json配置
+  ipcMain.handle('config:get-json', async (_event) => {
+    try {
+      const result = await configService.getJsonConfig()
+      return { success: true, data: result }
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error)
+      loggerError(`保存配置失败: ${errMsg}`, LOG_SOURCE)
+      return { success: false, error: errMsg }
     }
-  )
+  })
 
   // 保存 API Key
   ipcMain.handle(
@@ -95,6 +82,7 @@ export function registerConfigIPC(): void {
       const gatewayToken = configService.getGatewayToken()
       const gatewayBaseUrl = configService.getGatewayBaseUrl()
 
+      console.log('gatewayBaseUrl', gatewayBaseUrl)
       return {
         success: true,
         data: {

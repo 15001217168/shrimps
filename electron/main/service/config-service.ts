@@ -146,6 +146,25 @@ export class ConfigService extends BaseService {
     }
   }
 
+  getJsonConfig(): string {
+    try {
+      return JSON.stringify(this.readOpenClawConfig())
+    } catch (error) {
+      loggerError(`读取 OpenClaw 配置失败: ${error}`, LOG_SOURCE)
+    }
+    return ''
+  }
+
+  saveJsonConfig(json: string): boolean {
+    try {
+      this.writeOpenClawConfig(JSON.parse(json))
+      loggerSuccess('OpenClaw 配置已更新', LOG_SOURCE)
+      return true
+    } catch (error) {
+      loggerError(`写入 OpenClaw 配置失败: ${error}`, LOG_SOURCE)
+      return false
+    }
+  }
   /**
    * 保存 API Key 到 OpenClaw 配置（只更新 apiKey 字段，保留其他配置）
    * @param provider 提供商名称，默认为 'zai'
@@ -153,6 +172,8 @@ export class ConfigService extends BaseService {
   saveAPIKey(provider: APIProvider, apiKey: string): boolean {
     try {
       const openClawConfig = this.readOpenClawConfig()
+
+      console.log('saveAPIKey', provider, apiKey, openClawConfig)
 
       // 确保 models.providers 结构存在
       if (!openClawConfig.models) {
@@ -183,11 +204,6 @@ export class ConfigService extends BaseService {
 
       // 写入配置
       const result = this.writeOpenClawConfig(openClawConfig)
-
-      // 更新内存配置
-      if (provider === (this.config.claw.provider || 'zai')) {
-        this.config.claw.apiKey = apiKey
-      }
 
       // 更新 providers 配置
       if (!this.config.providers) {
@@ -443,56 +459,6 @@ export class ConfigService extends BaseService {
     const gatewayBaseUrl = this.getGatewayBaseUrl()
     if (gatewayBaseUrl) {
       this.config.gateway.baseUrl = gatewayBaseUrl
-    }
-  }
-
-  /**
-   * 获取完整配置
-   */
-  getConfig(): AppConfig {
-    // 获取当前 API Key
-    const apiKey = this.getAPIKey('zai')
-    // 获取当前 Gateway Token
-    const gatewayToken = this.getGatewayToken()
-    // 获取当前 Gateway Base URL
-    const gatewayBaseUrl = this.getGatewayBaseUrl()
-    return {
-      ...this.config,
-      claw: {
-        ...this.config.claw,
-        apiKey
-      },
-      gateway: {
-        baseUrl: gatewayBaseUrl,
-        auth: {
-          mode: 'token',
-          token: gatewayToken
-        }
-      }
-    }
-  }
-
-  /**
-   * 更新配置
-   */
-  async updateConfig(newConfig: Partial<AppConfig>): Promise<boolean> {
-    try {
-      // 更新内存配置
-      this.config = { ...this.config, ...newConfig }
-
-      // 如果有 API Key 更新，保存到 OpenClaw 配置
-      if (newConfig.claw?.apiKey) {
-        this.saveAPIKey('zai', newConfig.claw.apiKey)
-      }
-
-      // 同步到 OpenClaw 配置文件
-      await this.syncToOpenClawConfig()
-
-      loggerSuccess('配置已更新', LOG_SOURCE)
-      return true
-    } catch (error) {
-      loggerError(`更新配置失败: ${error}`, LOG_SOURCE)
-      return false
     }
   }
 

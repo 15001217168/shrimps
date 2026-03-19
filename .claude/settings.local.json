@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//Users/liuxuesong/Desktop/open-source/ai/openclaw-aad014c7c1fa3db5d9634c7f3ed781e3c7c012e5/ui/src/ui/controllers/**)",
-      "Read(//Users/liuxuesong/Desktop/open-source/ai/openclaw-aad014c7c1fa3db5d9634c7f3ed781e3c7c012e5/ui/src/ui/**)"
+      "Read(//Users/liuxuesong/Desktop/open-source/ai/openclaw-aad014c7c1fa3db5d9634c7f3ed781e3c7c012e5/ui/src/ui/**)",
+      "Bash(npm install:*)"
     ]
   }
 }

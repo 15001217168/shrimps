@@ -14,7 +14,7 @@ import { Modal } from '../components/Modal'
 import { toast } from 'sonner'
 import { motion } from 'motion/react'
 import clsx from 'clsx'
-import { useConnectionState, useConfigData } from '../context'
+import { useConnectionState, useConfigData, useLanguage } from '../context'
 
 const INITIAL_AGENTS = [
   {
@@ -55,6 +55,7 @@ const INITIAL_AGENTS = [
 export function AgentsPage() {
   const connectionState = useConnectionState()
   const configState = useConfigData()
+  const { t } = useLanguage()
   const [agents, setAgents] = useState(INITIAL_AGENTS)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAgentId, setEditingAgentId] = useState<number | null>(null)
@@ -105,7 +106,7 @@ export function AgentsPage() {
 
   const handleSave = () => {
     if (!name || !description) {
-      toast.error('Name and description are required.')
+      toast.error(t('agents.nameRequired'))
       return
     }
 
@@ -119,12 +120,12 @@ export function AgentsPage() {
                 description,
                 prompt: systemPrompt,
                 model: selectedModel,
-                skills: selectedSkills.length ? selectedSkills : ['None']
+                skills: selectedSkills.length ? selectedSkills : [t('skillTypes.none')]
               }
             : a
         )
       )
-      toast.success(`Agent "${name}" updated successfully.`)
+      toast.success(`${t('agents.agentName')} "${name}" ${t('agents.agentUpdated')}`)
     } else {
       const newAgent = {
         id: Date.now(),
@@ -135,10 +136,10 @@ export function AgentsPage() {
         bg: 'bg-orange-500/10',
         prompt: systemPrompt,
         model: selectedModel,
-        skills: selectedSkills.length ? selectedSkills : ['None']
+        skills: selectedSkills.length ? selectedSkills : [t('skillTypes.none')]
       }
       setAgents([...agents, newAgent])
-      toast.success(`Agent "${name}" configured successfully.`)
+      toast.success(`${t('agents.agentName')} "${name}" ${t('agents.agentCreated')}`)
     }
     setIsModalOpen(false)
   }
@@ -150,20 +151,20 @@ export function AgentsPage() {
   }
 
   return (
-    <div className='h-full flex flex-col p-6 overflow-y-auto bg-zinc-950 text-zinc-100'>
+    <div className='h-full flex flex-col p-6 overflow-y-auto bg-background text-foreground'>
       <div className='flex items-center justify-between mb-8'>
         <div>
-          <h1 className='text-2xl font-bold tracking-tight'>Agent Roster</h1>
-          <p className='text-zinc-400 mt-1'>
-            Configure specialized digital employees with unique system prompts.
+          <h1 className='text-2xl font-bold tracking-tight'>{t('agents.title')}</h1>
+          <p className='text-muted-foreground mt-1'>
+            {t('agents.subtitle')}
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className='flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20'
+          className='flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors shadow-lg shadow-orange-900/20'
         >
           <Plus className='w-4 h-4' />
-          Create Agent
+          {t('agents.createAgent')}
         </button>
       </div>
 
@@ -174,7 +175,7 @@ export function AgentsPage() {
             animate={{ opacity: 1, scale: 1 }}
             key={agent.id}
             onClick={() => openEditModal(agent)}
-            className='bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-zinc-700 transition-all shadow-sm group cursor-pointer relative overflow-hidden'
+            className='bg-card border border-border rounded-2xl p-6 hover:border-border-hover transition-all shadow-sm group cursor-pointer relative overflow-hidden'
           >
             <div
               className={`absolute top-0 right-0 w-32 h-32 blur-3xl rounded-full ${agent.bg} pointer-events-none opacity-50`}
@@ -182,12 +183,12 @@ export function AgentsPage() {
 
             <div className='flex justify-between items-start mb-4'>
               <div
-                className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner border border-zinc-800/80 ${agent.bg}`}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-inner border border-border/80 ${agent.bg}`}
               >
                 <agent.avatar className={`w-6 h-6 ${agent.color}`} />
               </div>
               <button
-                className='text-zinc-500 hover:text-zinc-300 transition-colors p-1 relative z-10'
+                className='text-muted-foreground hover:text-foreground transition-colors p-1 relative z-10'
                 onClick={(e) => {
                   e.stopPropagation()
                   openEditModal(agent)
@@ -197,10 +198,10 @@ export function AgentsPage() {
               </button>
             </div>
 
-            <h3 className='text-zinc-100 font-semibold text-lg tracking-tight mb-2 group-hover:text-orange-400 transition-colors'>
+            <h3 className='text-foreground font-semibold text-lg tracking-tight mb-2 group-hover:text-primary transition-colors'>
               {agent.name}
             </h3>
-            <p className='text-zinc-400 text-sm line-clamp-2 leading-relaxed h-10 mb-4'>
+            <p className='text-muted-foreground text-sm line-clamp-2 leading-relaxed h-10 mb-4'>
               {agent.description}
             </p>
 
@@ -208,7 +209,7 @@ export function AgentsPage() {
               {agent.skills.map((s) => (
                 <span
                   key={s}
-                  className='px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-zinc-950 border border-zinc-800 text-zinc-400'
+                  className='px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-background border border-border text-muted-foreground'
                 >
                   {s}
                 </span>
@@ -221,33 +222,33 @@ export function AgentsPage() {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingAgentId ? 'Edit Agent' : 'Configure Custom Agent'}
+        title={editingAgentId ? t('agents.editAgent') : t('agents.configureCustomAgent')}
         width='lg'
       >
         <div className='space-y-5'>
           <div className='grid grid-cols-2 gap-4'>
             <div>
-              <label className='block text-sm font-medium text-zinc-400 mb-1.5'>
-                Agent Name
+              <label className='block text-sm font-medium text-muted-foreground mb-1.5'>
+                {t('agents.agentName')}
               </label>
               <input
                 type='text'
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder='e.g., SEO Specialist'
-                className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-orange-500/50 focus:outline-none transition-colors'
+                placeholder={t('agents.agentNamePlaceholder')}
+                className='w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors'
               />
             </div>
             <div>
-              <label className='block text-sm font-medium text-zinc-400 mb-1.5'>
-                Model Override (Optional)
+              <label className='block text-sm font-medium text-muted-foreground mb-1.5'>
+                {t('agents.modelOverride')}
               </label>
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
-                className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:border-orange-500/50 focus:outline-none transition-colors appearance-none'
+                className='w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:border-primary/50 focus:outline-none transition-colors appearance-none'
               >
-                <option>Use Global Default</option>
+                <option>{t('agents.useGlobalDefault')}</option>
                 <option>OpenClaw-8B-Flash</option>
                 <option>OpenClaw-70B-Pro</option>
                 <option>GLM-4</option>
@@ -257,44 +258,44 @@ export function AgentsPage() {
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-zinc-400 mb-1.5'>
-              Description
+            <label className='block text-sm font-medium text-muted-foreground mb-1.5'>
+              {t('agents.description')}
             </label>
             <input
               type='text'
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this agent's specialty?"
-              className='w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-orange-500/50 focus:outline-none transition-colors'
+              placeholder={t('agents.descriptionPlaceholder')}
+              className='w-full bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors'
             />
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-zinc-400 mb-1.5 flex items-center justify-between'>
-              <span>System Prompt</span>
-              <span className='text-[10px] font-mono text-zinc-500'>
+            <label className='block text-sm font-medium text-muted-foreground mb-1.5 flex items-center justify-between'>
+              <span>{t('agents.systemPrompt')}</span>
+              <span className='text-[10px] font-mono text-muted-foreground'>
                 system_message
               </span>
             </label>
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
-              placeholder='You are an expert SEO specialist...'
-              className='w-full h-32 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 placeholder:text-zinc-700 focus:border-orange-500/50 focus:outline-none transition-colors resize-none scrollbar-thin'
+              placeholder={t('agents.systemPromptPlaceholder')}
+              className='w-full h-32 bg-background border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-primary/50 focus:outline-none transition-colors resize-none scrollbar-thin'
             />
           </div>
 
           <div>
-            <label className='block text-sm font-medium text-zinc-400 mb-2'>
-              Attach Skills
+            <label className='block text-sm font-medium text-muted-foreground mb-2'>
+              {t('agents.attachSkills')}
             </label>
             <div className='grid grid-cols-2 gap-2'>
               {[
-                'Web Search',
-                'Code Exec',
-                'Image Gen',
-                'Doc Reader',
-                'SQL Query'
+                t('skillTypes.webSearch'),
+                t('skillTypes.codeExec'),
+                t('skillTypes.imageGen'),
+                t('skillTypes.docReader'),
+                t('skillTypes.sqlQuery')
               ].map((skill) => (
                 <div
                   key={skill}
@@ -302,16 +303,16 @@ export function AgentsPage() {
                   className={clsx(
                     'flex items-center gap-2 p-2 rounded-lg border text-sm cursor-pointer transition-colors select-none',
                     selectedSkills.includes(skill)
-                      ? 'border-orange-500/50 bg-orange-500/10 text-orange-400'
-                      : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:bg-zinc-900'
+                      ? 'border-primary/50 bg-primary/10 text-primary'
+                      : 'border-border bg-background text-muted-foreground hover:bg-secondary'
                   )}
                 >
                   <div
                     className={clsx(
                       'w-4 h-4 rounded-sm flex items-center justify-center shrink-0 border',
                       selectedSkills.includes(skill)
-                        ? 'border-orange-500 bg-orange-500'
-                        : 'border-zinc-700 bg-zinc-900'
+                        ? 'border-primary bg-primary'
+                        : 'border-border-hover bg-secondary'
                     )}
                   >
                     {selectedSkills.includes(skill) && (
@@ -324,18 +325,18 @@ export function AgentsPage() {
             </div>
           </div>
 
-          <div className='pt-4 flex justify-end gap-3 border-t border-zinc-800/80'>
+          <div className='pt-4 flex justify-end gap-3 border-t border-border/80'>
             <button
               onClick={() => setIsModalOpen(false)}
-              className='px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-100 transition-colors'
+              className='px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors'
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
-              className='px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg text-sm font-medium transition-colors shadow-md'
+              className='px-4 py-2 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-medium transition-colors shadow-md'
             >
-              Save Agent
+              {t('agents.saveAgent')}
             </button>
           </div>
         </div>

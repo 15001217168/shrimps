@@ -108,13 +108,18 @@ export function ConfigProvider({
 
           console.log('IPC_CHANNELS.GET_SETTINGS', response.data)
 
-          setConfig((prev) => ({
-            ...prev,
-            provider: provider ?? {},
-            models: models ?? [],
-            currentModel: currentModel ?? '',
-            gateway: gateway ?? {}
-          }))
+          setConfig((prev) => {
+            const newConfig: ConfigData = {
+              ...prev,
+              provider: provider ?? {},
+              models: models ? [...models] : [],
+              currentModel: currentModel ?? ''
+            }
+            if (gateway && 'baseUrl' in gateway) {
+              newConfig.gateway = gateway as ConfigData['gateway']
+            }
+            return newConfig
+          })
         }
       })
       .catch((err) => {
@@ -224,7 +229,7 @@ export function ConfigProvider({
   // ==================== 便捷方法 ====================
 
   const hasValidAPIKey = useCallback((): boolean => {
-    return config.hasApiKey && config.apiKey.length > 0
+    return (config.hasApiKey ?? false) && (config.apiKey?.length ?? 0) > 0
   }, [config.hasApiKey, config.apiKey])
 
   const getCurrentModel = useCallback((): ModelInfo | null => {
